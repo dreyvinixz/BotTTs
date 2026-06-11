@@ -19,7 +19,6 @@
   },
   "homepage": "https://github.com/dreyvinixz/botTTs#readme",
   "dependencies": {
-    "@discordjs/opus": "^0.10.0",
     "@discordjs/voice": "^0.19.0",
     "@google-cloud/text-to-speech": "^6.2.0",
     "@snazzah/davey": "^0.1.6",
@@ -27,8 +26,9 @@
     "dotenv": "^17.2.1",
     "elevenlabs": "^1.59.0",
     "ffmpeg-static": "^5.2.0",
-    "gtts": "^0.2.1",
     "libsodium-wrappers": "^0.7.15",
-    "openai": "^5.12.2"
+    "msedge-tts": "^2.0.5",
+    "openai": "^5.12.2",
+    "opusscript": "^0.0.8"
   }
 }
