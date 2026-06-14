@@ -1,0 +1,25 @@
+node_modules/
+venv/
+stable-diffusion-webui-forge/
+
+.env
+.DS_Store
+
+# Local credentials / secrets
+google_credentials.json
+*.key
+*.pem
+*.p12
+*.jsonl
+
+# Personal runtime and policy files
+data/*
+!data/*.example.json
+politicas.txt
+politicas_imagem.txt
+voz.mp3
+*.log
+*.mp3
+
+# Local scratch files
+test.js

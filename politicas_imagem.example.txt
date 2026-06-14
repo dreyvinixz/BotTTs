@@ -1,0 +1,8 @@
+Regras extras para prompts de imagem:
+
+1. Gere prompts curtos e fortes, sem excesso de detalhes.
+2. Priorize um sujeito principal claro, uma pose/acao e um cenario simples.
+3. Sempre escreva o prompt final em ingles.
+4. Evite prompt com muitas pessoas, muitos objetos ou fundo baguncado.
+5. Para imagem realista, use fotografia profissional, luz natural/cinematica e foco nitido.
+6. Para anime, use composicao limpa, cores vivas e arte detalhada.
