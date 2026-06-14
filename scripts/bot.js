@@ -30,23 +30,24 @@ function createClient() {
 
 function buildHelpText() {
   return [
-    "**Comandos da Nana**",
-    "`!help` / `!ajuda` / `!comandos` - mostra esta lista.",
-    "`!ia <texto>` / `!llm <texto>` / `!texto <texto>` - conversa com a IA no modo casual/persona.",
-    "`!question <pergunta>` / `!pergunta <pergunta>` / `!q <pergunta>` - pergunta séria, resposta profissional.",
+    "**Comandos do Nana**",
+    "`!help` - mostra esta lista.",
+    "`!new` - mostra as últimas atualizações do bot.",
+    "`!nana <texto>` - conversa com a IA no modo casual/persona.",
+    "`!question <pergunta>` - pergunta séria, resposta profissional.",
     `  Provedor atual do !question: \`${config.QUESTION_PROVIDER === "gemini_cli" ? "Gemini CLI com fallback local" : "Ollama local"}\`.`,
-    "`!imagem <prompt>` / `!img <prompt>` / `!image <prompt>` - gera imagem realista pelo Forge.",
+    "`!img <prompt>` - gera imagem realista pelo Forge.",
     "`!anime <prompt>` - gera imagem em estilo anime pelo Forge.",
-    "`!voz <texto>` / `!f <texto>` / `!voice <texto>` - fala no canal de voz onde você está.",
+    "`!f <texto>` - fala no canal de voz onde você está.",
     "",
     "Também respondo quando me mencionam ou falam `nana` / `botbanana` como palavra separada."
   ].join("\n");
 }
 
 async function handleTextCommand(message) {
-  const texto = getCommandText(message, ["!ia", "!llm", "!texto"]);
+  const texto = getCommandText(message, ["!nana"]);
   if (!texto) {
-    return message.reply("Digite uma pergunta: `!ia me explica isso aqui`");
+    return message.reply("Digite uma pergunta: `!nana me explica isso aqui`");
   }
 
   try {
@@ -67,7 +68,7 @@ async function handleTextCommand(message) {
 }
 
 async function handleQuestionCommand(message) {
-  const texto = getCommandText(message, ["!question", "!pergunta", "!q"]);
+  const texto = getCommandText(message, ["!question"]);
   if (!texto) {
     return message.reply("Digite a pergunta: `!question quais são os mapas de Path of Exile?`");
   }
@@ -108,29 +109,36 @@ async function handleMessage(message) {
   cachearMensagem(message);
   maybeExtrairFofocas(message);
 
-  if (isCommand(message, ["!help", "!ajuda", "!comandos"])) {
+  if (isCommand(message, ["!help"])) {
     return message.reply({
       content: buildHelpText(),
       allowedMentions: { repliedUser: false, parse: [] }
     });
   }
 
-  if (isCommand(message, ["!f", "!voz", "!voice"])) {
-    return handleVoiceCommand(message, getCommandText(message, ["!f", "!voz", "!voice"]));
+  if (isCommand(message, ["!new"])) {
+    return message.reply({
+      content: "**Últimas Atualizações:**\n- `[Novo]` Comando `!new` adicionado.\n- `[Correção]` Resolvido bug de identidade (não confundo mais os usuários com o meu próprio nome).\n- `[Melhoria]` IDs de usuários removidos do código fonte para maior segurança e flexibilidade.",
+      allowedMentions: { repliedUser: false, parse: [] }
+    });
   }
 
-  if (isCommand(message, ["!ia", "!llm", "!texto"])) {
+  if (isCommand(message, ["!f"])) {
+    return handleVoiceCommand(message, getCommandText(message, ["!f"]));
+  }
+
+  if (isCommand(message, ["!nana"])) {
     return handleTextCommand(message);
   }
 
-  if (isCommand(message, ["!question", "!pergunta", "!q"])) {
+  if (isCommand(message, ["!question"])) {
     return handleQuestionCommand(message);
   }
 
-  if (isCommand(message, ["!image", "!imagem", "!img", "!anime"])) {
+  if (isCommand(message, ["!img", "!anime"])) {
     const isAnime = isCommand(message, ["!anime"]);
-    const cmd = isAnime ? "!anime" : "!imagem";
-    const prompt = getCommandText(message, ["!image", "!imagem", "!img", "!anime"]);
+    const cmd = isAnime ? "!anime" : "!img";
+    const prompt = getCommandText(message, ["!img", "!anime"]);
     return handleImageCommand(message, { prompt, isAnime, cmd });
   }
 

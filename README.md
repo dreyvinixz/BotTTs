@@ -75,12 +75,13 @@ npm start
 
 | Command | Purpose |
 | --- | --- |
-| `!help`, `!ajuda`, `!comandos` | Show command list. |
-| `!ia <text>`, `!llm <text>`, `!texto <text>` | Casual/persona LLM response. |
-| `!question <question>`, `!pergunta <question>`, `!q <question>` | Serious professional answer. |
-| `!imagem <prompt>`, `!img <prompt>`, `!image <prompt>` | Generate a realistic image. |
+| `!help` | Show command list. |
+| `!new` | Show latest bot updates. |
+| `!nana <text>` | Casual/persona LLM response. |
+| `!question <question>` | Serious professional answer. |
+| `!img <prompt>` | Generate a realistic image. |
 | `!anime <prompt>` | Generate an anime-style image. |
-| `!voz <text>`, `!f <text>`, `!voice <text>` | Speak in your current voice channel. |
+| `!f <text>` | Speak in your current voice channel. |
 
 The bot also responds when mentioned or when users say `nana` / `botbanana` as separate words.
 
