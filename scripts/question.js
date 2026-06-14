@@ -152,7 +152,7 @@ async function perguntarQuestionLocal(texto) {
     usarPoliticasDono: false,
     generationOptions: {
       temperature: 0.25,
-      num_predict: 260
+      num_predict: 500
     }
   }));
   const latency = Date.now() - startTime;

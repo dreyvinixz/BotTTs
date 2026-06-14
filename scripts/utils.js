@@ -19,8 +19,21 @@ function getCommandText(message, commands) {
   return cmd ? raw.slice(cmd.length).trim() : "";
 }
 
+async function traduzirParaIngles(texto) {
+  try {
+    const url = `https://translate.googleapis.com/translate_a/single?client=gtx&sl=pt&tl=en&dt=t&q=${encodeURIComponent(texto)}`;
+    const res = await fetch(url);
+    const data = await res.json();
+    return data[0].map(item => item[0]).join('');
+  } catch (err) {
+    console.error("Erro na tradução literal do Google:", err);
+    return texto;
+  }
+}
+
 module.exports = {
   escapeXml,
   isCommand,
-  getCommandText
+  getCommandText,
+  traduzirParaIngles
 };

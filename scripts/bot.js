@@ -191,7 +191,7 @@ async function handleMessage(message) {
       const p = topPlayers[i];
       let username = "Desconhecido";
       try {
-        const user = await message.client.users.fetch(p.id);
+        const user = message.client.users.cache.get(p.id) || await message.client.users.fetch(p.id);
         username = user ? user.username : p.id;
       } catch(e) {
         username = `User-${p.id.slice(-4)}`;

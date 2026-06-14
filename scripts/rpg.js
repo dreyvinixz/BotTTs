@@ -2,6 +2,7 @@ const { ActionRowBuilder, ButtonBuilder, ButtonStyle, ModalBuilder, TextInputBui
 const { pedirRespostaAoOllama, limparResposta } = require("./ollama");
 const { gerarImagemNoForge } = require("./image");
 const { addCoins, removeCoins } = require("./economy");
+const { traduzirParaIngles } = require("./utils");
 
 // Estado dos jogos em andamento (channelId -> estado)
 const activeAventuras = new Map();
@@ -149,10 +150,7 @@ async function handleRpgInteraction(interaction) {
   if (state.type === 'improviso_voting' && customId.startsWith('rpg_imp_vote_')) {
     const voteId = customId.split('_')[3]; // ex: A, B, C
     
-    // Impede votar em si mesmo (A MENOS que seja o único jogador, para permitir testes solo)
-    if (state.answerAuthors[voteId] === interaction.user.id && state.totalAnswers > 1) {
-      return interaction.reply({ content: `❌ Você não pode votar na sua própria resposta, espertinho!`, ephemeral: true });
-    }
+    // Self-voting is now allowed!
     
     if (!state.votos.has(interaction.user.id)) {
       state.votos.set(interaction.user.id, voteId);
@@ -169,13 +167,38 @@ async function handleRpgInteraction(interaction) {
 async function iniciarTurnoImproviso(channelId, channel, maxRounds, currentRound, globalScores) {
   activeAventuras.set(channelId, { type: 'generating' });
 
-  const promptOllama = `
-Gere um cenário de perigo iminente incrivelmente bizarro e nonsense num multiverso (ex: chove pianos em chamas, gravidade invertida com patos gigantes).
-Dê o contexto do perigo em 2 frases curtas, terminando com a pergunta: "O que vocês fazem?".
-Retorne EXATAMENTE:
+  let nomesParaZoeira = "os jogadores do chat";
+  if (channel.isTextBased() && channel.guild) {
+     const members = Array.from(channel.members.values()).filter(m => !m.user.bot).map(m => m.user.username);
+     if (members.length > 0) {
+        // Pega até 5 nomes aleatórios para não poluir muito
+        const shuffled = members.sort(() => 0.5 - Math.random()).slice(0, 5);
+        nomesParaZoeira = shuffled.join(", ");
+     }
+  }
 
-PROMPT_IMAGEM: [Prompt em inglês realista da cena para o Stable Diffusion]
-CENARIO: [As 2 frases do cenário]
+  const promptOllama = `
+Você é o mestre de um jogo de improviso no estilo Jackbox Party.
+Seu objetivo é focar em UM dos jogadores e criar uma fofoca divertida ou um MISTÉRIO leve do cotidiano, onde o final está faltando para os outros jogadores inventarem.
+Priorize situações curiosas, engraçadas e embaraçosas do dia a dia (evite coisas extremamente absurdas ou surreais).
+
+Exemplos de ESTILO (NÃO COPIE ELES, CRIE UM CENÁRIO 100% INÉDITO AGORA):
+- "[Nome] foi pego escondendo algo no escritório do chefe. O que ele estava escondendo?"
+- "[Nome] mandou uma mensagem no grupo da família e apagou correndo. O que estava escrito?"
+- "[Nome] tropeçou na rua e deixou cair algo muito constrangedor da mochila. O que era?"
+
+(ESCOLHA APENAS UM destes nomes para ser a vítima da rodada: ${nomesParaZoeira}).
+
+REGRAS CRÍTICAS:
+1. SEJA CRIATIVO! Crie uma situação completamente nova, simples e do cotidiano.
+2. NUNCA REVELE O SEGREDO! Deixe o motivo, a ação ou o objeto em aberto para os jogadores inventarem!
+3. SEJA BREVE! O cenário deve ter no máximo 2 frases curtas.
+4. Termine SEMPRE o cenário com uma pergunta (Ex: "O que era?", "O que ele fez?", "Por quê?").
+5. Pare de escrever IMEDIATAMENTE após a pergunta. Não dê respostas!
+6. Retorne EXATAMENTE o formato abaixo e não adicione mais nenhum texto:
+
+PROMPT_IMAGEM: [Prompt em inglês divertido para o Stable Diffusion. ATENÇÃO: NÃO use o nome da pessoa aqui! Use "a funny guy", "a person". Ex: funny meme, guy doing something stupid]
+CENARIO: [O texto curto da zoeira em português, citando o nome do jogador e terminando com a pergunta em aberto]
   `.trim();
 
   try {
@@ -184,17 +207,23 @@ CENARIO: [As 2 frases do cenário]
       [{ role: "user", content: promptOllama }],
       { usarPoliticasDono: false, generationOptions: { num_predict: 400 } }
     );
-    const resLimpa = limparResposta(resposta);
+    const resLimpa = limparResposta(resposta).replace(/```.*/g, "");
 
-    const pImgMatch = resLimpa.match(/PROMPT_IMAGEM:\s*([^\n]+)/i);
-    const cenMatch = resLimpa.match(/CEN[AÁ]RIO:\s*([\s\S]*)/i);
+    const pImgMatch = resLimpa.match(/(?:PROMPT)[A-Z_ ]*:\s*(?:\*\*)?\s*([^\n]+)/i);
+    let promptImg = pImgMatch ? pImgMatch[1].trim() : "absurd hilarious situation, weird meme, masterpiece";
 
-    const promptImg = pImgMatch ? pImgMatch[1].trim() : "";
-    const cenario = cenMatch ? cenMatch[1].trim() : "";
+    const cenMatch = resLimpa.match(/(?:CEN[AÁ]RIO|CENARIO|SCENARIO)[A-Z_ ]*:\s*(?:\*\*)?\s*([\s\S]*)/i);
+    let cenario = "";
 
-    if (!promptImg || !cenario) {
-      throw new Error("Formato inválido.");
+    if (cenMatch) {
+       cenario = cenMatch[1].split(/PROMPT/i)[0].trim();
+    } else {
+       console.warn("⚠️ A IA esqueceu a tag CENARIO. Usando extrator por exclusão.");
+       // O cenário é tudo o que sobrar depois de apagar a linha do prompt de imagem
+       cenario = resLimpa.replace(/(?:PROMPT)[A-Z_ ]*:\s*(?:\*\*)?\s*[^\n]+/i, "").trim();
     }
+
+    if (!cenario) cenario = "Uma fofoca inexplicável aconteceu, mas os registros foram apagados. O que foi?";
 
     // Pinta a imagem do cenário no background
     const attachment = await gerarImagemNoForge(promptImg, false);
@@ -222,7 +251,10 @@ CENARIO: [As 2 frases do cenário]
       const stateWrite = activeAventuras.get(channelId);
       if (!stateWrite || stateWrite.type !== 'improviso_writing') return;
 
-      await survMsg.edit({ components: [] }).catch(() => null);
+      await survMsg.edit({ 
+         content: `🌌 **IMPROVISO - RODADA ${currentRound}** 🌌\n\n${cenario}\n\n🛑 **TEMPO DE ESCRITA ESGOTADO!**`, 
+         components: [] 
+      }).catch(() => null);
 
       if (stateWrite.respostas.size === 0) {
         activeAventuras.delete(channelId);
@@ -243,10 +275,10 @@ CENARIO: [As 2 frases do cenário]
         const L = letras[index];
         answerAuthors[L] = userId;
         letterToText[L] = text;
-        textLines += `**${L}:** "${text}"\n`;
+        textLines += `> 🟢 **OPÇÃO ${L}** \n> *"${text}"*\n\n`;
         
         rowVote.addComponents(
-          new ButtonBuilder().setCustomId(`rpg_imp_vote_${L}`).setLabel(L).setStyle(ButtonStyle.Primary)
+          new ButtonBuilder().setCustomId(`rpg_imp_vote_${L}`).setLabel(`Opção ${L}`).setStyle(ButtonStyle.Primary)
         );
         index++;
       });
@@ -254,7 +286,7 @@ CENARIO: [As 2 frases do cenário]
       const endTimeVote = Math.floor(Date.now() / 1000) + 30;
 
       const voteMsg = await channel.send({
-        content: `🚨 **FIM DO TEMPO! AQUI ESTÃO AS IDEIAS:** 🚨\n\n${textLines}\n⏳ **VOTAÇÃO ENCERRA EM:** <t:${endTimeVote}:R>\n*Vote na melhor ação! Você não pode votar em si mesmo.*`,
+        content: `🚨 **FIM DO TEMPO! AQUI ESTÃO AS IDEIAS:** 🚨\n\n${textLines}\n⏳ **VOTAÇÃO ENCERRA EM:** <t:${endTimeVote}:R>\n*Vote na melhor ação! Votar em si mesmo é permitido (e até encorajado pela zoeira).*`,
         components: [rowVote]
       });
 
@@ -270,7 +302,7 @@ CENARIO: [As 2 frases do cenário]
         const stateVote = activeAventuras.get(channelId);
         if (!stateVote || stateVote.type !== 'improviso_voting') return;
         
-        await voteMsg.edit({ components: [] }).catch(() => null);
+        await voteMsg.edit({ content: `🛑 **VOTAÇÃO ENCERRADA!**`, components: [] }).catch(() => null);
 
         // Apurar votos
         const count = {};
@@ -285,64 +317,96 @@ CENARIO: [As 2 frases do cenário]
           return channel.send("Ninguém votou! Vocês ficaram discutindo até o apocalipse chegar. Fim de jogo.");
         }
 
-        let winnerLetter = Object.keys(count).reduce((a, b) => count[a] > count[b] ? a : b);
+        let maxVotes = 0;
+        Object.values(count).forEach(v => {
+           if (v > maxVotes) maxVotes = v;
+        });
+
+        // Encontrar todos com o máximo de votos (para caso de empate)
+        const empatados = Object.keys(count).filter(letra => count[letra] === maxVotes);
+        
+        // Se houver empate, escolhe um aleatoriamente para ser a "ação concretizada" da rodada
+        let winnerLetter = empatados[Math.floor(Math.random() * empatados.length)];
         let winnerText = stateVote.letterToText[winnerLetter];
         let winnerId = stateVote.answerAuthors[winnerLetter];
 
-        // Atualizar score global
-        const oldScore = globalScores.get(winnerId) || 0;
-        globalScores.set(winnerId, oldScore + 10);
+        // Atualizar score global de TODOS os que empataram
+        empatados.forEach(letra => {
+           const id = stateVote.answerAuthors[letra];
+           const oldScore = globalScores.get(id) || 0;
+           globalScores.set(id, oldScore + 5);
+        });
 
-        channel.send(`⏰ **VOTAÇÃO ENCERRADA!** A ideia vencedora foi a **${winnerLetter}** criada por <@${winnerId}>!\n*A IA está ilustrando o que aconteceu com essa ideia... ⏳*`);
+        // Construir string de resultados detalhada
+        let resultados = `⏰ **VOTAÇÃO ENCERRADA!** Aqui estão os autores:\n\n`;
+        Object.keys(stateVote.answerAuthors).forEach(letra => {
+           const autor = stateVote.answerAuthors[letra];
+           const numVotos = count[letra] || 0;
+           const textoId = stateVote.letterToText[letra];
+           resultados += `**Opção ${letra}** (${numVotos} votos) -> <@${autor}>\n*"${textoId}"*\n\n`;
+        });
+
+        if (empatados.length > 1) {
+           const mensoesEmpate = empatados.map(l => `<@${stateVote.answerAuthors[l]}>`).join(" e ");
+           resultados += `🏆 **HOUVE UM EMPATE!** Entre as opções ${empatados.join(", ")}!\n${mensoesEmpate} ganharam +5 pontos!\n*(A opção **${winnerLetter}** foi sorteada para continuar a história)*`;
+        } else {
+           resultados += `🏆 **A IDEIA VENCEDORA** foi a **${winnerLetter}**! <@${winnerId}> ganhou +5 pontos!`;
+        }
+
         activeAventuras.set(channelId, { type: 'generating' });
 
-        // Gerar consequencia via Forge! O prompt do Forge será a ação do cara.
-        // Vamos pedir para o Ollama traduzir a ação pra inglês pra ficar bonito no SD.
-        const promptTradução = `Traduza a ação a seguir para o inglês, criando um prompt focado e realista para o Stable Diffusion. A ação foi uma resposta para o cenário: "${stateVote.cenario}". Ação do jogador: "${winnerText}". Retorne APENAS o prompt em inglês.`;
-        
-        let promptFinalImg = stateVote.promptImg; // fallback
+        // Tenta pegar um GIF aleatório salvo no banco do bot para ilustrar a zoeira (opcional)
+        let gifUrl = null;
         try {
-           const tResp = await pedirRespostaAoOllama([{ role: "user", content: promptTradução }], { usarPoliticasDono: false, generationOptions: { num_predict: 100 } });
-           promptFinalImg = limparResposta(tResp);
+           const fs = require('fs');
+           const config = require('./config');
+           if (fs.existsSync(config.GIFS_PATH)) {
+              const gifsDb = JSON.parse(fs.readFileSync(config.GIFS_PATH));
+              if (gifsDb && gifsDb.length > 0) {
+                 gifUrl = gifsDb[Math.floor(Math.random() * gifsDb.length)];
+              }
+           }
         } catch(e) {}
 
-        gerarImagemNoForge(promptFinalImg, false).then(async attachFinal => {
-           let resolMsg = `📸 **AÇÃO CONCRETIZADA:**\n"<@${winnerId}>: *${winnerText}*"\n\n`;
-           
-           if (currentRound < maxRounds) {
-              resolMsg += `👉 Preparando a Rodada ${currentRound + 1}...`;
-              await channel.send({ content: resolMsg, files: [attachFinal] });
-              setTimeout(() => {
-                iniciarTurnoImproviso(channelId, channel, maxRounds, currentRound + 1, globalScores);
-              }, 3000);
-           } else {
-              // FIM DE JOGO
-              resolMsg += `🏆 **FIM DO JOGO!**\nO Multiverso está salvo (ou destruído, tanto faz).\n\n**PLACAR FINAL:**\n`;
-              
-              const sorted = Array.from(globalScores.entries()).sort((a, b) => b[1] - a[1]);
-              const premios = [300, 150, 50]; // Top 3
-              
-              for (let i = 0; i < sorted.length; i++) {
-                 const medal = i === 0 ? "🥇" : i === 1 ? "🥈" : i === 2 ? "🥉" : "🏅";
-                 resolMsg += `${medal} <@${sorted[i][0]}> - ${sorted[i][1]} Pontos`;
-                 
-                 if (i < 3) {
-                    addCoins(sorted[i][0], premios[i]);
-                    resolMsg += ` *(Ganhou ${premios[i]} Nanacoins 🪙!)*\n`;
-                 } else {
-                    resolMsg += `\n`;
-                 }
-              }
-              
-              activeAventuras.delete(channelId);
-              await channel.send({ content: resolMsg, files: [attachFinal] });
-           }
+        let resolMsg = `📸 **AÇÃO CONCRETIZADA:**\n"<@${winnerId}>: *${winnerText}*"\n\n`;
 
-        }).catch(err => {
-           console.error("Erro Forge", err);
-           channel.send("Erro ao ilustrar o final.");
+        if (currentRound < maxRounds) {
+           resolMsg += `👉 Preparando a Rodada ${currentRound + 1}...`;
+           const payload = { content: resultados + "\n\n" + resolMsg };
+           if (gifUrl) payload.content += `\n${gifUrl}`;
+           
+           await channel.send(payload);
+           setTimeout(() => {
+             iniciarTurnoImproviso(channelId, channel, maxRounds, currentRound + 1, globalScores);
+           }, 3000);
+        } else {
+           // FIM DE JOGO
+           resolMsg += `🏆 **FIM DO JOGO!**\nO Multiverso (ou a reputação de vocês) está a salvo.\n\n**PLACAR FINAL:**\n`;
+           
+           const sorted = Array.from(globalScores.entries()).sort((a, b) => b[1] - a[1]);
+           
+           // Ajustar prêmios baseados na quantidade de rodadas para não quebrar a economia
+           let premios = [50, 20, 10]; // Base para 1 rodada
+           if (maxRounds === 3) premios = [150, 75, 25];
+           if (maxRounds >= 5) premios = [300, 150, 50];
+           
+           for (let i = 0; i < sorted.length; i++) {
+              const medal = i === 0 ? "🥇" : i === 1 ? "🥈" : i === 2 ? "🥉" : "🏅";
+              resolMsg += `${medal} <@${sorted[i][0]}> - ${sorted[i][1]} Pontos`;
+              
+              if (i < 3) {
+                 addCoins(sorted[i][0], premios[i]);
+                 resolMsg += ` *(Ganhou ${premios[i]} Nanacoins 🪙!)*\n`;
+              } else {
+                 resolMsg += `\n`;
+              }
+           }
+           
            activeAventuras.delete(channelId);
-        });
+           const payload = { content: resultados + "\n\n" + resolMsg };
+           if (gifUrl) payload.content += `\n${gifUrl}`;
+           await channel.send(payload);
+        }
 
       }, 30000);
 
@@ -362,16 +426,16 @@ async function iniciarModoEnigma(channelId, channel, diff) {
   activeAventuras.set(channelId, { type: 'generating' });
 
   const promptOllama = `
-Gere um cenário incrivelmente bizarro, nonsense e aleatório (exemplo: astronautas ordenhando vacas no espaço, ou um dinossauro operando no Wall Street).
+Gere um cenário curioso, inusitado ou engraçado, mas sem ser exageradamente bizarro (exemplo: um cachorro de óculos lendo jornal, ou uma vovó andando de skate).
 O objetivo é um jogo de adivinhação. O usuário SÓ vai ver a imagem desse cenário.
 Dificuldade solicitada: ${diff.promptMod}
 Me retorne EXATAMENTE neste formato de 5 linhas e mais nada:
 
-PROMPT_IMAGEM: [Prompt em inglês, detalhado, fotorealista e focado no cenário bizarro para o Stable Diffusion]
-VERDADEIRA: [1 frase em português descrevendo corretamente a cena bizarra]
-FALSA_1: [1 frase em português completamente diferente e absurda, mas que também poderia ser estranha]
-FALSA_2: [Outra frase em português diferente e absurda]
-FALSA_3: [Outra frase em português diferente e absurda]
+PROMPT_IMAGEM: [Prompt em inglês, detalhado, fotorealista e focado no cenário inusitado para o Stable Diffusion]
+VERDADEIRA: [1 frase CURTA (máximo 12 palavras) em português descrevendo corretamente a cena]
+FALSA_1: [1 frase CURTA em português descrevendo uma cena diferente mas engraçada]
+FALSA_2: [1 frase CURTA em português descrevendo outra cena diferente]
+FALSA_3: [1 frase CURTA em português descrevendo outra cena diferente]
   `.trim();
 
   try {
@@ -413,15 +477,15 @@ FALSA_3: [Outra frase em português diferente e absurda]
     const corretaIndex = opcoes.findIndex(o => o.correta);
 
     const row1 = new ActionRowBuilder().addComponents(
-      new ButtonBuilder().setCustomId('rpg_enigma_0').setLabel('Opção 1').setStyle(ButtonStyle.Secondary),
-      new ButtonBuilder().setCustomId('rpg_enigma_1').setLabel('Opção 2').setStyle(ButtonStyle.Secondary)
+      new ButtonBuilder().setCustomId('rpg_enigma_0').setLabel('Opção 1').setStyle(ButtonStyle.Primary),
+      new ButtonBuilder().setCustomId('rpg_enigma_1').setLabel('Opção 2').setStyle(ButtonStyle.Primary)
     );
     const row2 = new ActionRowBuilder().addComponents(
-      new ButtonBuilder().setCustomId('rpg_enigma_2').setLabel('Opção 3').setStyle(ButtonStyle.Secondary),
-      new ButtonBuilder().setCustomId('rpg_enigma_3').setLabel('Opção 4').setStyle(ButtonStyle.Secondary)
+      new ButtonBuilder().setCustomId('rpg_enigma_2').setLabel('Opção 3').setStyle(ButtonStyle.Primary),
+      new ButtonBuilder().setCustomId('rpg_enigma_3').setLabel('Opção 4').setStyle(ButtonStyle.Primary)
     );
 
-    let txtOpcoes = `**1.** ${opcoes[0].texto}\n**2.** ${opcoes[1].texto}\n**3.** ${opcoes[2].texto}\n**4.** ${opcoes[3].texto}`;
+    let txtOpcoes = `> 🔵 **OPÇÃO 1:**\n> *${opcoes[0].texto}*\n\n> 🔵 **OPÇÃO 2:**\n> *${opcoes[1].texto}*\n\n> 🔵 **OPÇÃO 3:**\n> *${opcoes[2].texto}*\n\n> 🔵 **OPÇÃO 4:**\n> *${opcoes[3].texto}*`;
 
     const endTime = Math.floor(Date.now() / 1000) + 45;
 

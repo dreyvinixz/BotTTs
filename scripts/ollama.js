@@ -56,8 +56,10 @@ async function pedirRespostaAoOllama(messages, options = {}) {
           top_p: config.OLLAMA_TOP_P,
           repeat_penalty: config.OLLAMA_REPEAT_PENALTY,
           num_predict: config.OLLAMA_NUM_PREDICT,
+          num_gpu: 99, // Força a placa de vídeo (CUDA) a processar todas as camadas
           ...generationOptions
         }
+        // O keep_alive foi removido para permitir que a placa de vídeo (VRAM) seja limpa após o uso.
       })
     });
 
