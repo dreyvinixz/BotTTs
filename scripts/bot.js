@@ -18,6 +18,8 @@ const {
 } = require("./chat");
 const { handleForcaCommand, checkForcaGuess } = require("./games");
 const { getCoins, getTopPlayers } = require("./economy");
+const { handleRoubarCommand, handleDueloCommand, handleButtonInteraction, isPrisioneiro } = require("./duel");
+const { handleAventuraCommand, handleRpgInteraction } = require("./rpg");
 
 function createClient() {
   return new Client({
@@ -32,20 +34,37 @@ function createClient() {
 
 function buildHelpText() {
   return [
-    "**Comandos do Nana**",
-    "`!help` - mostra esta lista.",
-    "`!new` - mostra as últimas atualizações do bot.",
-    "`!saldo` / `!nanacoins` - verifica quanto dinheiro virtual você tem.",
-    "`!rank` - mostra os mais ricos do servidor.",
-    "`!forca` - inicia o jogo da Forca da IA.",
-    "`!nana <texto>` - conversa com a IA no modo casual/persona.",
-    "`!question <pergunta>` - pergunta séria, resposta profissional.",
-    `  Provedor atual do !question: \`${config.QUESTION_PROVIDER === "gemini_cli" ? "Gemini CLI com fallback local" : "Ollama local"}\`.`,
-    "`!img <prompt>` - gera imagem realista pelo Forge.",
-    "`!anime <prompt>` - gera imagem em estilo anime pelo Forge.",
-    "`!f <texto>` - fala no canal de voz onde você está.",
+    "🤖 **Comandos do Nana** 🍌",
+    "ℹ️ `!help` - mostra esta lista.",
+    "✨ `!new` - mostra as últimas atualizações do bot.",
+    "💰 `!saldo` / `!nanacoins` - verifica quanto dinheiro virtual você tem.",
+    "🏆 `!rank` - mostra os mais ricos do servidor.",
+    "🥷 `!roubar @user` - tenta roubar Nanacoins. Se falhar, você vai preso!",
+    "⚔️ `!duelo @user <valor>` - inicia um combate tático com apostas.",
+    "🌌 `!aventura` (ou `!rpg`, `!av`) - RPG do multiverso (Modo Improviso e Enigma!).",
+    "🎮 `!forca` - inicia o jogo da Forca da IA.",
+    "💬 `!nana <texto>` - conversa com a IA no modo casual/persona.",
+    "🧠 `!question <pergunta>` - pergunta séria, resposta profissional.",
+    `  ⚙️ Provedor atual do !question: \`${config.QUESTION_PROVIDER === "gemini_cli" ? "Gemini CLI com fallback local" : "Ollama local"}\`.`,
+    "🖼️ `!img <prompt>` - gera imagem realista pelo Forge.",
+    "🌸 `!anime <prompt>` - gera imagem em estilo anime pelo Forge.",
+    "🔊 `!f <texto>` - fala no canal de voz onde você está.",
     "",
-    "Também respondo quando me mencionam ou falam `nana` / `botbanana` como palavra separada."
+    "🐒 *Também respondo quando me mencionam ou falam `nana` / `botbanana` como palavra separada.*"
+  ].join("\n");
+}
+
+function buildNewText() {
+  return [
+    "**Últimas Atualizações do Nana V3.0 (O Multiverso):**",
+    "🪙 **Economia Global:** Ganhe *Nanacoins 🪙* conversando e interagindo. Use `!saldo` e `!rank` para ver sua riqueza.",
+    "🌌 **[NOVO] Hub do Multiverso (`!rpg`, `!av`, `!aventura`):** Um novo motor de RPG visual gerado 100% por IA (Ollama + Forge).",
+    "  🎭 **Improviso:** A IA cria o cenário e vocês escrevem secretamente ações criativas para o grupo votar na melhor!",
+    "  🕵️‍♂️ **Enigma Visual:** A IA desenha um absurdo e esconde o texto. Você deve adivinhar o que a imagem significa!",
+    "🔥 **[NOVO] Dificuldades do Multiverso:** Fácil, Médio, Difícil e modo **Infernal** (cruel, onde errar te faz perder moedas).",
+    "🎮 **Arcade Clássico (`!forca`):** Jogue o clássico da Forca da IA. (Cuidado: errar a palavra de propósito tira 30 🪙!).",
+    "⚔️ **Guerra e Caos:** Desafie amigos com `!duelo` (Pedra-Papel-Tesoura com botões) ou tente a sorte com `!roubar`.",
+    "🚓 **Prisão Virtual:** Se falhar num roubo, ficará sem poder jogar por 30 minutos."
   ].join("\n");
 }
 
@@ -114,6 +133,10 @@ async function handleMessage(message) {
   cachearMensagem(message);
   maybeExtrairFofocas(message);
 
+  if (isPrisioneiro(message.author.id) && (isCommand(message, ["!forca", "!roubar", "!duelo", "!aventura", "!rpg", "!av"]) || checkForcaGuess(message))) {
+    return message.reply("🚓 Você está na prisão! Presidiários não podem jogar Forca, Aventura, Duelos ou Roubar.");
+  }
+
   if (checkForcaGuess(message)) {
     return;
   }
@@ -127,7 +150,7 @@ async function handleMessage(message) {
 
   if (isCommand(message, ["!new"])) {
     return message.reply({
-      content: "**Últimas Atualizações:**\n- `[Novo]` Comando `!new` adicionado.\n- `[Correção]` Resolvido bug de identidade (não confundo mais os usuários com o meu próprio nome).\n- `[Melhoria]` IDs de usuários removidos do código fonte para maior segurança e flexibilidade.",
+      content: buildNewText(),
       allowedMentions: { repliedUser: false, parse: [] }
     });
   }
@@ -140,18 +163,30 @@ async function handleMessage(message) {
     return handleForcaCommand(message);
   }
 
+  if (isCommand(message, ["!aventura", "!rpg", "!av"])) {
+    return handleAventuraCommand(message);
+  }
+
+  if (isCommand(message, ["!roubar"])) {
+    return handleRoubarCommand(message, getCommandText(message, ["!roubar"]));
+  }
+
+  if (isCommand(message, ["!duelo"])) {
+    return handleDueloCommand(message, getCommandText(message, ["!duelo"]));
+  }
+
   if (isCommand(message, ["!saldo", "!nanacoins", "!atm", "!dinheiro"])) {
     const coins = getCoins(message.author.id);
-    return message.reply(`💰 Você tem **${coins} Nanacoins** na sua conta! Jogue \`!forca\` para ganhar mais.`);
+    return message.reply(`💰 Você tem **${coins} Nanacoins 🪙** na sua conta! Jogue \`!forca\` para ganhar mais.`);
   }
 
   if (isCommand(message, ["!rank", "!top"])) {
-    const topPlayers = getTopPlayers(10);
+    const topPlayers = getTopPlayers(15);
     if (topPlayers.length === 0) {
       return message.reply("Ninguém tem dinheiro ainda. Joguem `!forca`!");
     }
     
-    let rankText = "🏆 **RANKING GLOBAL - OS MAIS RICOS** 🏆\n\n";
+    let rankText = "🏆 **RANKING GLOBAL - TOP 15 MAIS RICOS** 🏆\n\n";
     for (let i = 0; i < topPlayers.length; i++) {
       const p = topPlayers[i];
       let username = "Desconhecido";
@@ -162,11 +197,21 @@ async function handleMessage(message) {
         username = `User-${p.id.slice(-4)}`;
       }
       
-      const medal = i === 0 ? "🥇" : i === 1 ? "🥈" : i === 2 ? "🥉" : "🏅";
-      rankText += `${medal} **#${i + 1}** ${username} — **${p.balance}** Nanacoins\n`;
+      const medal = i === 0 ? "🥇" : i === 1 ? "🥈" : i === 2 ? "🥉" : "🔹";
+      
+      let formattedName = username;
+      if (i === 0) formattedName = `👑 **${username.toUpperCase()}**`;
+      else if (i === 1) formattedName = `**${username}**`;
+      else if (i === 2) formattedName = `*${username}*`;
+      
+      if (i < 3) {
+        rankText += `${medal} **#${i + 1}** ${formattedName} — **${p.balance}** Nanacoins 🪙\n`;
+      } else {
+        rankText += `${medal} #${i + 1} ${formattedName} — ${p.balance} Nanacoins 🪙\n`;
+      }
     }
     
-    rankText += "\n💰 Jogue `!forca` ou fale no chat para subir no rank!";
+    rankText += "\n💰 Jogue `!forca` ou converse no chat para subir no rank!";
     return message.reply(rankText);
   }
 
@@ -198,6 +243,14 @@ function start() {
   client.on("messageCreate", (message) => {
     handleMessage(message).catch((err) => {
       console.error("🔥 Erro inesperado no messageCreate:", err);
+    });
+  });
+  client.on("interactionCreate", (interaction) => {
+    handleButtonInteraction(interaction).catch((err) => {
+      console.error("🔥 Erro inesperado no duelo interactionCreate:", err);
+    });
+    handleRpgInteraction(interaction).catch((err) => {
+      console.error("🔥 Erro inesperado no rpg interactionCreate:", err);
     });
   });
 

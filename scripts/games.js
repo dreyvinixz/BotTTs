@@ -1,7 +1,7 @@
 const { AttachmentBuilder } = require("discord.js");
 const config = require("./config");
 const { assertForgeReady } = require("./services");
-const { addCoins } = require("./economy");
+const { addCoins, removeCoins } = require("./economy");
 
 const forcaGames = new Map();
 
@@ -44,6 +44,23 @@ Chute uma letra enviando-a sozinha no chat.
 **Vidas:** ${coracoes}`;
 }
 
+function resetForcaTimer(channelId, channel) {
+  const gameState = forcaGames.get(channelId);
+  if (!gameState) return;
+  
+  if (gameState.timerId) clearTimeout(gameState.timerId);
+  
+  gameState.timerId = setTimeout(() => {
+    if (forcaGames.has(channelId)) {
+      const g = forcaGames.get(channelId);
+      forcaGames.delete(channelId);
+      if (g.mainMessage) {
+         g.mainMessage.edit(`⏰ **O JOGO EXPIROU POR INATIVIDADE!**\nA palavra era **${g.word}**!\n\n${getForcaEmbedText(g)}`).catch(() => null);
+      }
+    }
+  }, 300000); // 5 minutes
+}
+
 async function handleForcaCommand(message) {
   const channelId = message.channel.id;
   if (forcaGames.has(channelId)) {
@@ -55,10 +72,12 @@ async function handleForcaCommand(message) {
     word: word,
     guessed: new Set(),
     lives: 6,
-    mainMessage: null
+    mainMessage: null,
+    timerId: null
   };
   
   forcaGames.set(channelId, gameState);
+  resetForcaTimer(channelId, message.channel);
 
   const m = await message.channel.send("🎨 A IA está pintando a dica visual (isso pode demorar uns segundos)...");
 
@@ -121,6 +140,7 @@ function checkForcaGuess(message) {
   // Chute de letra única
   if (text.length === 1 && /[A-Z]/.test(text)) {
     message.delete().catch(() => null); // Apaga o chute para limpar o chat
+    resetForcaTimer(channelId, message.channel);
 
     if (gameState.guessed.has(text)) {
       return true; // Ignora letras repetidas silenciosamente
@@ -138,11 +158,13 @@ function checkForcaGuess(message) {
     const won = gameState.word.split("").every(char => gameState.guessed.has(char));
     
     if (won) {
+      if (gameState.timerId) clearTimeout(gameState.timerId);
       forcaGames.delete(channelId);
       addCoins(message.author.id, 50); // Recompensa por terminar o jogo
-      gameState.mainMessage.edit(`🎉 **VITÓRIA!** O jogador ${message.author.username} adivinhou a última letra e ganhou **50 Nanacoins**!\nA palavra era **${gameState.word}**!\n\n${getForcaEmbedText(gameState)}`).catch(() => null);
+      gameState.mainMessage.edit(`🎉 **VITÓRIA!** O jogador ${message.author.username} adivinhou a última letra e ganhou **50 Nanacoins 🪙**!\nA palavra era **${gameState.word}**!\n\n${getForcaEmbedText(gameState)}`).catch(() => null);
       return true;
     } else if (gameState.lives <= 0) {
+      if (gameState.timerId) clearTimeout(gameState.timerId);
       forcaGames.delete(channelId);
       gameState.mainMessage.edit(`💀 **GAME OVER!** Vocês foram enforcados!\nA palavra era **${gameState.word}**!\n\n${getForcaEmbedText(gameState)}`).catch(() => null);
       return true;
@@ -155,17 +177,21 @@ function checkForcaGuess(message) {
   // Chute da palavra inteira
   if (text.length > 1 && /^[A-Z]+$/.test(text)) {
     message.delete().catch(() => null); // Apaga o chute do chat
+    resetForcaTimer(channelId, message.channel);
 
     if (text === gameState.word) {
+      if (gameState.timerId) clearTimeout(gameState.timerId);
       forcaGames.delete(channelId);
       addCoins(message.author.id, 150); // Recompensa Épica
-      gameState.mainMessage.edit(`🎉 **VITÓRIA ÉPICA!** O jogador ${message.author.username} adivinhou a palavra inteira de uma vez e ganhou **150 Nanacoins**!\nA palavra era **${gameState.word}**!\n\n${getForcaEmbedText(gameState)}`).catch(() => null);
+      gameState.mainMessage.edit(`🎉 **VITÓRIA ÉPICA!** O jogador ${message.author.username} adivinhou a palavra inteira de uma vez e ganhou **150 Nanacoins 🪙**!\nA palavra era **${gameState.word}**!\n\n${getForcaEmbedText(gameState)}`).catch(() => null);
       return true;
     } else {
       gameState.lives--;
       if (gameState.lives <= 0) {
+        if (gameState.timerId) clearTimeout(gameState.timerId);
         forcaGames.delete(channelId);
-        gameState.mainMessage.edit(`💀 **GAME OVER!** Chutou a palavra errada e morreu!\nA palavra era **${gameState.word}**!\n\n${getForcaEmbedText(gameState)}`).catch(() => null);
+        removeCoins(message.author.id, 30);
+        gameState.mainMessage.edit(`💀 **GAME OVER!** O jogador ${message.author.username} chutou a palavra errada, matou o boneco e perdeu **30 Nanacoins 🪙**!\nA palavra era **${gameState.word}**!\n\n${getForcaEmbedText(gameState)}`).catch(() => null);
         return true;
       } else {
         gameState.mainMessage.edit(`❌ Palavra errada! Perderam 1 vida.\n\n${getForcaEmbedText(gameState)}`).catch(() => null);

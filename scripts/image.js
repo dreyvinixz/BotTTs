@@ -92,20 +92,9 @@ Output: "cute astronaut cat, floating in a spaceship, detailed space suit, soft 
   return promptFallbackImagem(ideia || ideiaOriginal, isAnime);
 }
 
-async function handleImageCommand(message, { prompt, isAnime, cmd }) {
-  if (!prompt) {
-    return message.reply(`Digite o que você quer desenhar: \`${cmd} um gato cibernético\``);
-  }
-
-  const m = await message.channel.send("🎨 Melhorando o prompt da imagem. Aguarde...");
-
-  const promptEmIngles = await melhorarPromptImagem(prompt, isAnime);
-  console.log(`🖼️ Prompt melhorado: ${promptEmIngles}`);
-
+async function gerarImagemNoForge(promptEmIngles, isAnime) {
   const modelo = isAnime ? config.FORGE_ANIME_MODEL : config.FORGE_REALISTIC_MODEL;
-  const negative_prompt = isAnime
-    ? config.FORGE_ANIME_NEGATIVE_PROMPT
-    : config.FORGE_REALISTIC_NEGATIVE_PROMPT;
+  const negative_prompt = isAnime ? config.FORGE_ANIME_NEGATIVE_PROMPT : config.FORGE_REALISTIC_NEGATIVE_PROMPT;
 
   const payload = {
     prompt: promptEmIngles,
@@ -120,23 +109,36 @@ async function handleImageCommand(message, { prompt, isAnime, cmd }) {
     batch_size: config.FORGE_BATCH_SIZE
   };
 
-  const startTime = Date.now();
+  await assertForgeReady();
+  const response = await fetch(`${config.FORGE_HOST}/sdapi/v1/txt2img`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload)
+  });
+
+  if (!response.ok) {
+    throw new Error(`Status ${response.status}`);
+  }
+
+  const data = await response.json();
+  const imageBase64 = data.images[0];
+  const buffer = Buffer.from(imageBase64, "base64");
+  return new AttachmentBuilder(buffer, { name: "imagem.png" });
+}
+
+async function handleImageCommand(message, { prompt, isAnime, cmd }) {
+  if (!prompt) {
+    return message.reply(`Digite o que você quer desenhar: \`${cmd} um gato cibernético\``);
+  }
+
+  const m = await message.channel.send("🎨 Melhorando o prompt da imagem. Aguarde...");
+
   try {
-    await assertForgeReady();
-    const response = await fetch(`${config.FORGE_HOST}/sdapi/v1/txt2img`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload)
-    });
-
-    if (!response.ok) {
-      return m.edit(`⚠️ Erro da IA (Status ${response.status}). O Forge WebUI está rodando no WSL?`);
-    }
-
-    const data = await response.json();
-    const imageBase64 = data.images[0];
-    const buffer = Buffer.from(imageBase64, "base64");
-    const attachment = new AttachmentBuilder(buffer, { name: "imagem.png" });
+    const promptEmIngles = await melhorarPromptImagem(prompt, isAnime);
+    console.log(`🖼️ Prompt melhorado: ${promptEmIngles}`);
+    
+    const startTime = Date.now();
+    const attachment = await gerarImagemNoForge(promptEmIngles, isAnime);
     const latency = Date.now() - startTime;
     console.log(`⏱️ [Imagem/Forge] Latência: ${latency}ms para o prompt "${prompt}"`);
 
@@ -149,5 +151,6 @@ async function handleImageCommand(message, { prompt, isAnime, cmd }) {
 }
 
 module.exports = {
-  handleImageCommand
+  handleImageCommand,
+  gerarImagemNoForge
 };

@@ -79,6 +79,9 @@ npm start
 | `!new` | Show latest bot updates. |
 | `!saldo` | Check your Nanacoins balance. |
 | `!rank` | View the global richest players. |
+| `!roubar @user` | Try to steal Nanacoins (risks going to prison). |
+| `!duelo @user <amount>` | Initiate a tactical button duel. |
+| `!aventura` | Start the Multiverse RPG and Enigma Hub. |
 | `!forca` | Play AI-generated Hangman game. |
 | `!nana <text>` | Casual/persona LLM response. |
 | `!question <question>` | Serious professional answer. |
