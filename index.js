@@ -28,25 +28,74 @@ const writeFile = util.promisify(fs.writeFile);
 const execFileAsync = util.promisify(execFile);
 let skipGoogleTts = false;
 
+function getEnvNumber(name, fallback) {
+  const value = Number(process.env[name]);
+  return Number.isFinite(value) ? value : fallback;
+}
+
+function getEnvString(name, fallback) {
+  return process.env[name] || fallback;
+}
+
+function ensureDir(dirPath) {
+  fs.mkdirSync(dirPath, { recursive: true });
+}
+
+const DATA_DIR = path.resolve(__dirname, getEnvString("DATA_DIR", "data"));
+ensureDir(DATA_DIR);
+
+const GIFS_PATH = path.resolve(__dirname, getEnvString("GIFS_PATH", path.join("data", "gifs.json")));
+const FOFOCAS_PATH = path.resolve(__dirname, getEnvString("FOFOCAS_PATH", path.join("data", "fofocas.json")));
+ensureDir(path.dirname(GIFS_PATH));
+ensureDir(path.dirname(FOFOCAS_PATH));
+const DEFAULT_GIF_URL = getEnvString("DEFAULT_GIF_URL", "https://media.tenor.com/Z4cOQWc-DscAAAAC/banana.gif");
+const POLITICAS_PATH = path.resolve(__dirname, getEnvString("POLITICAS_PATH", "politicas.txt"));
+const POLITICAS_IMAGEM_PATH = path.resolve(__dirname, getEnvString("POLITICAS_IMAGEM_PATH", "politicas_imagem.txt"));
+
 const OLLAMA_MODEL = process.env.OLLAMA_MODEL || "qwen3:1.7b";
 const OLLAMA_HOST = process.env.OLLAMA_HOST || "http://127.0.0.1:11434";
 const FORGE_HOST = process.env.FORGE_HOST || "http://127.0.0.1:7860";
-const EDGE_TTS_VOICE = process.env.EDGE_TTS_VOICE || "pt-BR-AntonioNeural";
-const VOICE_IDLE_TIMEOUT_MS = Number(process.env.VOICE_IDLE_TIMEOUT_MS || 300_000);
+const EDGE_TTS_VOICE = getEnvString("EDGE_TTS_VOICE", "pt-BR-AntonioNeural");
+const GOOGLE_TTS_LANGUAGE_CODE = getEnvString("GOOGLE_TTS_LANGUAGE_CODE", "pt-BR");
+const GOOGLE_TTS_VOICE = getEnvString("GOOGLE_TTS_VOICE", "pt-BR-Wavenet-A");
+const VOICE_IDLE_TIMEOUT_MS = getEnvNumber("VOICE_IDLE_TIMEOUT_MS", 300_000);
 const QUESTION_PROVIDER = (process.env.QUESTION_PROVIDER || "local").toLowerCase();
 const GEMINI_CLI_MODEL = (process.env.GEMINI_CLI_MODEL || "auto").toLowerCase();
-const GEMINI_CLI_TIMEOUT_MS = Number(process.env.GEMINI_CLI_TIMEOUT_MS || 120_000);
+const GEMINI_CLI_TIMEOUT_MS = getEnvNumber("GEMINI_CLI_TIMEOUT_MS", 120_000);
+
+const CHANCE_RESPONDER_PERGUNTA = getEnvNumber("CHANCE_RESPONDER_PERGUNTA", 0.12);
+const CHANCE_RESPONDER_CASUAL = getEnvNumber("CHANCE_RESPONDER_CASUAL", 0.003);
+const CHANCE_RESPONDER_MIDIA = getEnvNumber("CHANCE_RESPONDER_MIDIA", 0.10);
+const COOLDOWN_USUARIO_MS = getEnvNumber("COOLDOWN_USUARIO_MS", 120_000);
+const COOLDOWN_CANAL_MS = getEnvNumber("COOLDOWN_CANAL_MS", 60_000);
+const OLLAMA_TIMEOUT_MS = getEnvNumber("OLLAMA_TIMEOUT_MS", 30_000);
+const OLLAMA_NUM_PREDICT = getEnvNumber("OLLAMA_NUM_PREDICT", 120);
+const OLLAMA_TEMPERATURE = getEnvNumber("OLLAMA_TEMPERATURE", 0.6);
+const OLLAMA_TOP_K = getEnvNumber("OLLAMA_TOP_K", 40);
+const OLLAMA_TOP_P = getEnvNumber("OLLAMA_TOP_P", 0.9);
+const OLLAMA_REPEAT_PENALTY = getEnvNumber("OLLAMA_REPEAT_PENALTY", 1.15);
+
+const CHAT_CACHE_LIMIT = getEnvNumber("CHAT_CACHE_LIMIT", 100);
+const CONTEXT_HISTORY_LIMIT = getEnvNumber("CONTEXT_HISTORY_LIMIT", 6);
+const FOFOCA_MIN_MESSAGES = getEnvNumber("FOFOCA_MIN_MESSAGES", 50);
+const FOFOCA_MAX_ITEMS = getEnvNumber("FOFOCA_MAX_ITEMS", 30);
+const GIF_COOLDOWN_MS = getEnvNumber("GIF_COOLDOWN_MS", 180_000);
+const TEMP_ERROR_DELETE_MS = getEnvNumber("TEMP_ERROR_DELETE_MS", 5_000);
+
+const FORGE_REALISTIC_MODEL = getEnvString("FORGE_REALISTIC_MODEL", "DreamShaper_8_pruned.safetensors");
+const FORGE_ANIME_MODEL = getEnvString("FORGE_ANIME_MODEL", "MeinaMix_V11.safetensors");
+const FORGE_STEPS = getEnvNumber("FORGE_STEPS", 25);
+const FORGE_WIDTH = getEnvNumber("FORGE_WIDTH", 512);
+const FORGE_HEIGHT = getEnvNumber("FORGE_HEIGHT", 512);
+const FORGE_SAMPLER = getEnvString("FORGE_SAMPLER", "Euler a");
+const FORGE_BATCH_SIZE = getEnvNumber("FORGE_BATCH_SIZE", 1);
+const FORGE_REALISTIC_NEGATIVE_PROMPT = getEnvString("FORGE_REALISTIC_NEGATIVE_PROMPT", "ugly, low quality, bad anatomy, deformed, watermark, text, extra fingers, mutated hands, poorly drawn, blurry, artifacts, cluttered background, messy composition");
+const FORGE_ANIME_NEGATIVE_PROMPT = getEnvString("FORGE_ANIME_NEGATIVE_PROMPT", "ugly, low quality, bad anatomy, deformed, poorly drawn face, poorly drawn hands, missing fingers, missing limbs, cluttered background, messy composition, watermark, text, blurry");
 
 // Memória RAM ultra-rápida (totalmente interna/privada, não envia para o Discord nem para a nuvem)
 const chatCache = new Map();
 let ultimoGifEnviado = 0; // Limite de spam de GIFs
 let mensagemCountFofoca = 0; // Contador para a Fofoqueira
-const CHANCE_RESPONDER_PERGUNTA = 0.75;
-const CHANCE_RESPONDER_CASUAL = 0.02; // Caiu de 12% para 2% para ficar mais quieta
-const CHANCE_RESPONDER_MIDIA = 0.60;  // 60% de chance de reagir a imagens/videos
-const COOLDOWN_USUARIO_MS = 25_000;
-const COOLDOWN_CANAL_MS = 8_000;
-const OLLAMA_TIMEOUT_MS = 30_000;
 
 const userCooldown = new Map();
 const channelCooldown = new Map();
@@ -55,9 +104,9 @@ let lastOllamaStats = null;
 
 function lerPoliticasDono() {
   try {
-    return fs.readFileSync(path.join(__dirname, "politicas.txt"), "utf-8").trim();
+    return fs.readFileSync(POLITICAS_PATH, "utf-8").trim();
   } catch (e) {
-    console.warn("⚠️ politicas.txt não encontrado ou não pôde ser lido.");
+    console.warn(`⚠️ ${path.basename(POLITICAS_PATH)} não encontrado ou não pôde ser lido.`);
     return "";
   }
 }
@@ -89,7 +138,7 @@ async function generateWithGoogle(text, filePath) {
 
   const request = {
     input: { text },
-    voice: { languageCode: 'pt-BR', name: 'pt-BR-Wavenet-A' },
+    voice: { languageCode: GOOGLE_TTS_LANGUAGE_CODE, name: GOOGLE_TTS_VOICE },
     audioConfig: { audioEncoding: 'MP3' },
   };
 
@@ -462,9 +511,9 @@ function promptFallbackImagem(ideia, isAnime) {
 
 function lerPoliticasImagem() {
   try {
-    return fs.readFileSync(path.join(__dirname, "politicas_imagem.txt"), "utf-8").trim();
+    return fs.readFileSync(POLITICAS_IMAGEM_PATH, "utf-8").trim();
   } catch (e) {
-    console.warn("⚠️ politicas_imagem.txt não encontrado ou não pôde ser lido.");
+    console.warn(`⚠️ ${path.basename(POLITICAS_IMAGEM_PATH)} não encontrado ou não pôde ser lido.`);
     return "";
   }
 }
@@ -572,11 +621,11 @@ async function pedirRespostaAoOllama(messages, options = {}) {
         stream: false,
         messages: mensagensComPoliticas,
         options: {
-          temperature: 0.6,
-          top_k: 40,
-          top_p: 0.9,
-          repeat_penalty: 1.15,
-          num_predict: 120,
+          temperature: OLLAMA_TEMPERATURE,
+          top_k: OLLAMA_TOP_K,
+          top_p: OLLAMA_TOP_P,
+          repeat_penalty: OLLAMA_REPEAT_PENALTY,
+          num_predict: OLLAMA_NUM_PREDICT,
           ...generationOptions
         }
       })
@@ -623,13 +672,12 @@ async function extrairFofocas(channelId) {
 
     if (resposta && resposta.length > 5 && !invalida) {
       let fofocas = [];
-      const fofocasPath = path.join(__dirname, "fofocas.json");
-      try { fofocas = JSON.parse(fs.readFileSync(fofocasPath, "utf-8")); } catch (e) { }
+      try { fofocas = JSON.parse(fs.readFileSync(FOFOCAS_PATH, "utf-8")); } catch (e) { }
 
       fofocas.push(`[${new Date().toLocaleDateString()}] ${resposta.replace(/\n/g, " ")}`);
-      if (fofocas.length > 30) fofocas.shift(); // Manter até 30 fatos longos
+      while (fofocas.length > FOFOCA_MAX_ITEMS) fofocas.shift();
 
-      fs.writeFileSync(fofocasPath, JSON.stringify(fofocas, null, 2));
+      fs.writeFileSync(FOFOCAS_PATH, JSON.stringify(fofocas, null, 2));
       console.log("🕵️ Nova fofoca gravada no banco de dados!");
     }
   } catch (err) {
@@ -641,7 +689,7 @@ async function montarContexto(message, motivo) {
   let fofocaContexto = "";
   if (message.guild && message.guild.id === process.env.SERVIDOR_FOFOCA) {
     try {
-      const fofocas = JSON.parse(fs.readFileSync(path.join(__dirname, "fofocas.json"), "utf-8"));
+      const fofocas = JSON.parse(fs.readFileSync(FOFOCAS_PATH, "utf-8"));
       if (fofocas.length > 0) {
         fofocaContexto = "\n\nMEMÓRIA LONGA (Fofocas que você sabe sobre as pessoas deste servidor):\n" + fofocas.join("\n");
       }
@@ -650,7 +698,7 @@ async function montarContexto(message, motivo) {
 
   const historico = chatCache.get(message.channel.id) || [];
   const formatHistorico = historico
-    .slice(-6) // REDUZIDO DE 15 PARA 6 PARA A IA NÃO ESQUECER AS REGRAS E A PERSONALIDADE
+    .slice(-CONTEXT_HISTORY_LIMIT)
     .filter((msg) => !msg.author.bot || msg.author.id === client.user.id)
     .map((msg) => ({
       role: msg.author.id === client.user.id ? "assistant" : "user",
@@ -694,7 +742,7 @@ async function responderComOllama(message, motivo) {
   if (resposta.includes("[GIF]")) {
     resposta = resposta.replace(/\[GIF\]/g, "").trim();
     // Limite: 1 GIF a cada 3 minutos (180.000 ms) para não virar spam
-    if (Date.now() - ultimoGifEnviado > 180000) {
+    if (Date.now() - ultimoGifEnviado > GIF_COOLDOWN_MS) {
       enviarGif = true;
     }
   }
@@ -708,15 +756,15 @@ async function responderComOllama(message, motivo) {
 
   if (enviarGif) {
     try {
-      const savedGifs = JSON.parse(fs.readFileSync(path.join(__dirname, "gifs.json"), "utf-8"));
+      const savedGifs = JSON.parse(fs.readFileSync(GIFS_PATH, "utf-8"));
       if (savedGifs.length > 0) {
         gifUrl = savedGifs[Math.floor(Math.random() * savedGifs.length)];
         ultimoGifEnviado = Date.now();
       } else {
-        gifUrl = "https://media.tenor.com/Z4cOQWc-DscAAAAC/banana.gif"; // GIF padrão
+        gifUrl = DEFAULT_GIF_URL;
       }
     } catch (e) {
-      gifUrl = "https://media.tenor.com/Z4cOQWc-DscAAAAC/banana.gif"; // GIF padrão
+      gifUrl = DEFAULT_GIF_URL;
     }
 
     // Se ela escolheu mandar o GIF, apagamos o texto para ir SÓ o GIF!
@@ -758,8 +806,7 @@ client.on("messageCreate", async (message) => {
 
   if (gifLinks.length > 0) {
     let savedGifs = [];
-    const gifsPath = path.join(__dirname, "gifs.json");
-    try { savedGifs = JSON.parse(fs.readFileSync(gifsPath, "utf-8")); } catch (e) { }
+    try { savedGifs = JSON.parse(fs.readFileSync(GIFS_PATH, "utf-8")); } catch (e) { }
 
     let novosGifs = false;
     gifLinks.forEach(link => {
@@ -770,7 +817,7 @@ client.on("messageCreate", async (message) => {
     });
 
     if (novosGifs) {
-      fs.writeFileSync(gifsPath, JSON.stringify(savedGifs, null, 2));
+      fs.writeFileSync(GIFS_PATH, JSON.stringify(savedGifs, null, 2));
     }
   }
   // ---------------------------------------------
@@ -781,16 +828,14 @@ client.on("messageCreate", async (message) => {
   }
   const channelCache = chatCache.get(message.channel.id);
   channelCache.push(message);
-  // Limitar a 100 mensagens para não estourar o "Cérebro" da IA (Limite de Tokens)
-  if (channelCache.length > 100) {
+  if (channelCache.length > CHAT_CACHE_LIMIT) {
     channelCache.shift();
   }
 
   // --- Espionagem (Fofoca) ---
   if (process.env.SERVIDOR_FOFOCA && message.guild.id === process.env.SERVIDOR_FOFOCA) {
     mensagemCountFofoca++;
-    // Se acumulou 50 mensagens desde a última espionagem
-    if (mensagemCountFofoca >= 50) {
+    if (mensagemCountFofoca >= FOFOCA_MIN_MESSAGES) {
       mensagemCountFofoca = 0;
       extrairFofocas(message.channel.id); // Roda em background invisível
     }
@@ -824,7 +869,7 @@ client.on("messageCreate", async (message) => {
       await message.delete();
       return message.channel.send("Digite algo para eu falar: `!voz Olá mundo`").then(msg => {
         // Apaga a mensagem de erro do bot depois de 5 segundos
-        setTimeout(() => msg.delete(), 5000);
+        setTimeout(() => msg.delete(), TEMP_ERROR_DELETE_MS);
       });
     }
 
@@ -858,7 +903,7 @@ client.on("messageCreate", async (message) => {
       }
       // Envia uma mensagem de erro no canal que também se apaga
       message.channel.send(`⚠️ Erro só na voz: ${err.message}`).then(msg => {
-        setTimeout(() => msg.delete(), 5000);
+        setTimeout(() => msg.delete(), TEMP_ERROR_DELETE_MS);
       });
     }
 
@@ -939,22 +984,22 @@ client.on("messageCreate", async (message) => {
     console.log(`🖼️ Prompt melhorado: ${promptEmIngles}`);
 
     // Configuração Dinâmica do Modelo:
-    const modelo = isAnime ? "MeinaMix_V11.safetensors" : "DreamShaper_8_pruned.safetensors";
+    const modelo = isAnime ? FORGE_ANIME_MODEL : FORGE_REALISTIC_MODEL;
     const negative_prompt = isAnime
-      ? "ugly, low quality, bad anatomy, deformed, poorly drawn face, poorly drawn hands, missing fingers, missing limbs, cluttered background, messy composition, watermark, text, blurry"
-      : "ugly, low quality, bad anatomy, deformed, watermark, text, extra fingers, mutated hands, poorly drawn, blurry, artifacts, cluttered background, messy composition";
+      ? FORGE_ANIME_NEGATIVE_PROMPT
+      : FORGE_REALISTIC_NEGATIVE_PROMPT;
 
     const payload = {
       prompt: promptEmIngles,
       negative_prompt: negative_prompt,
-      steps: 25,
-      width: 512,
-      height: 512,
+      steps: FORGE_STEPS,
+      width: FORGE_WIDTH,
+      height: FORGE_HEIGHT,
       override_settings: {
         sd_model_checkpoint: modelo
       },
-      sampler_name: "Euler a",
-      batch_size: 1
+      sampler_name: FORGE_SAMPLER,
+      batch_size: FORGE_BATCH_SIZE
     };
 
     const startTime = Date.now();
