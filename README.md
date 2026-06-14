@@ -82,7 +82,7 @@ npm start
 | `!anime <prompt>` | Generate an anime-style image. |
 | `!voz <text>`, `!f <text>`, `!voice <text>` | Speak in your current voice channel. |
 
-The bot also responds when mentioned or when users say `nana` / `botbanana`.
+The bot also responds when mentioned or when users say `nana` / `botbanana` as separate words.
 
 ## Serious Question Mode
 
