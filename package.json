@@ -4,7 +4,11 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "start": "node .",
+    "check": "node --check index.js",
+    "ollama:create": "ollama create botbanana -f Modelfile",
+    "ollama:create:example": "ollama create botbanana -f examples/Modelfile.example",
+    "test": "npm run check"
   },
   "repository": {
     "type": "git",

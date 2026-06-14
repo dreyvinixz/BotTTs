@@ -13,8 +13,7 @@ google_credentials.json
 *.jsonl
 
 # Personal runtime and policy files
-data/*
-!data/*.example.json
+data/
 Modelfile
 politicas.txt
 politicas_imagem.txt
