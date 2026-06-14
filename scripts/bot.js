@@ -16,6 +16,8 @@ const {
   maybeExtrairFofocas,
   maybeResponderEspontaneo
 } = require("./chat");
+const { handleForcaCommand, checkForcaGuess } = require("./games");
+const { getCoins, getTopPlayers } = require("./economy");
 
 function createClient() {
   return new Client({
@@ -33,6 +35,9 @@ function buildHelpText() {
     "**Comandos do Nana**",
     "`!help` - mostra esta lista.",
     "`!new` - mostra as últimas atualizações do bot.",
+    "`!saldo` / `!nanacoins` - verifica quanto dinheiro virtual você tem.",
+    "`!rank` - mostra os mais ricos do servidor.",
+    "`!forca` - inicia o jogo da Forca da IA.",
     "`!nana <texto>` - conversa com a IA no modo casual/persona.",
     "`!question <pergunta>` - pergunta séria, resposta profissional.",
     `  Provedor atual do !question: \`${config.QUESTION_PROVIDER === "gemini_cli" ? "Gemini CLI com fallback local" : "Ollama local"}\`.`,
@@ -109,6 +114,10 @@ async function handleMessage(message) {
   cachearMensagem(message);
   maybeExtrairFofocas(message);
 
+  if (checkForcaGuess(message)) {
+    return;
+  }
+
   if (isCommand(message, ["!help"])) {
     return message.reply({
       content: buildHelpText(),
@@ -125,6 +134,40 @@ async function handleMessage(message) {
 
   if (isCommand(message, ["!f"])) {
     return handleVoiceCommand(message, getCommandText(message, ["!f"]));
+  }
+
+  if (isCommand(message, ["!forca"])) {
+    return handleForcaCommand(message);
+  }
+
+  if (isCommand(message, ["!saldo", "!nanacoins", "!atm", "!dinheiro"])) {
+    const coins = getCoins(message.author.id);
+    return message.reply(`💰 Você tem **${coins} Nanacoins** na sua conta! Jogue \`!forca\` para ganhar mais.`);
+  }
+
+  if (isCommand(message, ["!rank", "!top"])) {
+    const topPlayers = getTopPlayers(10);
+    if (topPlayers.length === 0) {
+      return message.reply("Ninguém tem dinheiro ainda. Joguem `!forca`!");
+    }
+    
+    let rankText = "🏆 **RANKING GLOBAL - OS MAIS RICOS** 🏆\n\n";
+    for (let i = 0; i < topPlayers.length; i++) {
+      const p = topPlayers[i];
+      let username = "Desconhecido";
+      try {
+        const user = await message.client.users.fetch(p.id);
+        username = user ? user.username : p.id;
+      } catch(e) {
+        username = `User-${p.id.slice(-4)}`;
+      }
+      
+      const medal = i === 0 ? "🥇" : i === 1 ? "🥈" : i === 2 ? "🥉" : "🏅";
+      rankText += `${medal} **#${i + 1}** ${username} — **${p.balance}** Nanacoins\n`;
+    }
+    
+    rankText += "\n💰 Jogue `!forca` ou fale no chat para subir no rank!";
+    return message.reply(rankText);
   }
 
   if (isCommand(message, ["!nana"])) {

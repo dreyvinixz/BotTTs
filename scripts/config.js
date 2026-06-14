@@ -22,14 +22,17 @@ ensureDir(DATA_DIR);
 
 const GIFS_PATH = path.resolve(ROOT_DIR, getEnvString("GIFS_PATH", path.join("data", "gifs.json")));
 const FOFOCAS_PATH = path.resolve(ROOT_DIR, getEnvString("FOFOCAS_PATH", path.join("data", "fofocas.json")));
+const ECONOMIA_PATH = path.resolve(ROOT_DIR, getEnvString("ECONOMIA_PATH", path.join("data", "economia.json")));
 ensureDir(path.dirname(GIFS_PATH));
 ensureDir(path.dirname(FOFOCAS_PATH));
+ensureDir(path.dirname(ECONOMIA_PATH));
 
 module.exports = {
   ROOT_DIR,
   DATA_DIR,
   GIFS_PATH,
   FOFOCAS_PATH,
+  ECONOMIA_PATH,
   DEFAULT_GIF_URL: getEnvString("DEFAULT_GIF_URL", "https://media.tenor.com/Z4cOQWc-DscAAAAC/banana.gif"),
   POLITICAS_PATH: path.resolve(ROOT_DIR, getEnvString("POLITICAS_PATH", "politicas.txt")),
   POLITICAS_IMAGEM_PATH: path.resolve(ROOT_DIR, getEnvString("POLITICAS_IMAGEM_PATH", "politicas_imagem.txt")),

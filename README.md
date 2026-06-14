@@ -77,6 +77,9 @@ npm start
 | --- | --- |
 | `!help` | Show command list. |
 | `!new` | Show latest bot updates. |
+| `!saldo` | Check your Nanacoins balance. |
+| `!rank` | View the global richest players. |
+| `!forca` | Play AI-generated Hangman game. |
 | `!nana <text>` | Casual/persona LLM response. |
 | `!question <question>` | Serious professional answer. |
 | `!img <prompt>` | Generate a realistic image. |
