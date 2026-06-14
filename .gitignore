@@ -15,6 +15,7 @@ google_credentials.json
 # Personal runtime and policy files
 data/*
 !data/*.example.json
+Modelfile
 politicas.txt
 politicas_imagem.txt
 voz.mp3
