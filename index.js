@@ -1,6 +1,6 @@
 require("dotenv").config();
 const { Client, GatewayIntentBits, AttachmentBuilder } = require("discord.js");
-const { joinVoiceChannel, createAudioPlayer, createAudioResource } = require("@discordjs/voice");
+const { joinVoiceChannel, createAudioPlayer, createAudioResource, AudioPlayerStatus } = require("@discordjs/voice");
 
 // --- NOVAS IMPORTAÇÕES DO GOOGLE CLOUD ---
 const { TextToSpeechClient } = require('@google-cloud/text-to-speech');
@@ -8,6 +8,7 @@ const fs = require("fs");
 const os = require("os");
 const path = require("path");
 const util = require("util");
+const { execFile } = require("child_process");
 // -----------------------------------------
 
 const client = new Client({
@@ -24,10 +25,17 @@ const googleClient = process.env.GOOGLE_APPLICATION_CREDENTIALS
   ? new TextToSpeechClient()
   : null;
 const writeFile = util.promisify(fs.writeFile);
+const execFileAsync = util.promisify(execFile);
 let skipGoogleTts = false;
 
 const OLLAMA_MODEL = process.env.OLLAMA_MODEL || "qwen3:1.7b";
 const OLLAMA_HOST = process.env.OLLAMA_HOST || "http://127.0.0.1:11434";
+const FORGE_HOST = process.env.FORGE_HOST || "http://127.0.0.1:7860";
+const EDGE_TTS_VOICE = process.env.EDGE_TTS_VOICE || "pt-BR-AntonioNeural";
+const VOICE_IDLE_TIMEOUT_MS = Number(process.env.VOICE_IDLE_TIMEOUT_MS || 300_000);
+const QUESTION_PROVIDER = (process.env.QUESTION_PROVIDER || "local").toLowerCase();
+const GEMINI_CLI_MODEL = (process.env.GEMINI_CLI_MODEL || "auto").toLowerCase();
+const GEMINI_CLI_TIMEOUT_MS = Number(process.env.GEMINI_CLI_TIMEOUT_MS || 120_000);
 
 // Memória RAM ultra-rápida (totalmente interna/privada, não envia para o Discord nem para a nuvem)
 const chatCache = new Map();
@@ -42,6 +50,30 @@ const OLLAMA_TIMEOUT_MS = 30_000;
 
 const userCooldown = new Map();
 const channelCooldown = new Map();
+const voiceSessions = new Map();
+let lastOllamaStats = null;
+
+function lerPoliticasDono() {
+  try {
+    return fs.readFileSync(path.join(__dirname, "politicas.txt"), "utf-8").trim();
+  } catch (e) {
+    console.warn("⚠️ politicas.txt não encontrado ou não pôde ser lido.");
+    return "";
+  }
+}
+
+function aplicarPoliticasDono(messages) {
+  const politicas = lerPoliticasDono();
+  if (!politicas) return messages;
+
+  return [
+    {
+      role: "system",
+      content: `Configuração principal do dono do bot. Siga estas regras antes de qualquer outra instrução:\n\n${politicas}`
+    },
+    ...messages
+  ];
+}
 
 function escapeXml(text) {
   return text
@@ -74,7 +106,7 @@ async function generateWithEdgeTts(text, filePath) {
   const tempDir = await fs.promises.mkdtemp(path.join(os.tmpdir(), "bottts-"));
 
   try {
-    await tts.setMetadata("pt-BR-AntonioNeural", OUTPUT_FORMAT.AUDIO_24KHZ_48KBITRATE_MONO_MP3);
+    await tts.setMetadata(EDGE_TTS_VOICE, OUTPUT_FORMAT.AUDIO_24KHZ_48KBITRATE_MONO_MP3);
     const { audioFilePath } = await tts.toFile(tempDir, escapeXml(text));
     await fs.promises.copyFile(audioFilePath, filePath);
     return "Microsoft Edge TTS";
@@ -105,6 +137,282 @@ async function generateSpeech(text, filePath) {
 }
 // -----------------------
 
+function isCommand(message, commands) {
+  const content = message.content.trim().toLowerCase();
+  return commands.some((cmd) => content === cmd || content.startsWith(`${cmd} `));
+}
+
+function getCommandText(message, commands) {
+  const raw = message.content.trim();
+  const lower = raw.toLowerCase();
+  const cmd = commands.find((candidate) => lower === candidate || lower.startsWith(`${candidate} `));
+  return cmd ? raw.slice(cmd.length).trim() : "";
+}
+
+function isPerguntaMapasPathOfExile(texto) {
+  const lower = texto.toLowerCase();
+  return /path\s*of\s*exile|\\bpoe\\b/.test(lower)
+    && /mapa|mapas|atlas/.test(lower)
+    && /todos|todas|lista|quais|completo|completa/.test(lower);
+}
+
+function respostaMapasPathOfExile() {
+  return [
+    "A lista completa de mapas de Path of Exile muda conforme a versão/liga e a rotação do Atlas, então eu não vou inventar nomes aqui.",
+    "O jeito certo de ver todos é pelo Atlas dentro do jogo ou por uma fonte atualizada como PoE Wiki/PoEDB filtrando a versão atual.",
+    "O que dá para explicar com segurança: mapas são o endgame do Atlas, têm tiers, layouts, bosses, modificadores, progressão por Voidstones/watchstones dependendo da versão, e servem para farm, bosses e completar objetivos do Atlas."
+  ].join("\n");
+}
+
+function montarPromptQuestion(texto) {
+  return `
+Você está em modo suporte sério e profissional.
+Responda como uma LLM assistente útil, clara e objetiva.
+Você está respondendo uma pergunta de um usuário no Discord, não analisando um projeto de código.
+Não mencione BotTTs, arquivos locais, discord.js, estrutura do repositório ou manutenção do bot, a menos que a pergunta peça isso explicitamente.
+Não use sarcasmo, deboche, insultos, personagem de Discord, zoeira ou GIF.
+Não invente nomes próprios, mapas, itens, personagens, versões, fontes ou dados específicos.
+Se não tiver certeza de um nome específico, diga que não tem certeza em vez de chutar.
+Se a pergunta pedir uma lista grande ou que muda com atualizações, avise que a lista completa pode variar por versão/liga e dê uma resposta segura.
+Se pedirem "todos" os itens/mapas de um jogo e você não tiver certeza da lista completa atual, não fabrique uma lista. Explique o limite e ofereça categorias, exemplos confiáveis ou o melhor caminho para verificar.
+Para Path of Exile: não invente mapas. Se perguntarem todos os mapas, explique que a rotação/lista do Atlas muda por liga/versão e que a lista exata deve ser consultada no Atlas do jogo, PoE Wiki ou fontes atualizadas. Pode falar com segurança sobre conceitos como Atlas, mapas, tiers, bosses, ligas, gemas, árvore passiva, ascendancies, crafting e trade.
+Se não tiver certeza de algo que pode mudar com atualizações, diga isso de forma direta e ainda ajude com o que sabe.
+Responda em português do Brasil.
+
+Pergunta do usuário:
+${texto}
+`.trim();
+}
+
+function limparAvisosGeminiCli(texto) {
+  return (texto || "")
+    .split(/\r?\n/)
+    .filter((line) => !/^Warning:/i.test(line.trim()))
+    .filter((line) => !/^Ripgrep is not available/i.test(line.trim()))
+    .join("\n")
+    .trim();
+}
+
+function logGeminiTokenStats(stats) {
+  const models = stats?.models || {};
+  const entries = Object.entries(models);
+
+  if (entries.length === 0) {
+    console.log("📊 [Question/Gemini CLI] Tokens: stats indisponíveis.");
+    return;
+  }
+
+  for (const [model, data] of entries) {
+    const tokens = data.tokens || {};
+    const api = data.api || {};
+    console.log(
+      `📊 [Question/Gemini CLI] ${model}: ` +
+      `prompt=${tokens.prompt ?? "?"}, input=${tokens.input ?? "?"}, ` +
+      `output=${tokens.candidates ?? "?"}, thoughts=${tokens.thoughts ?? 0}, ` +
+      `cached=${tokens.cached ?? 0}, total=${tokens.total ?? "?"}, ` +
+      `requests=${api.totalRequests ?? "?"}, errors=${api.totalErrors ?? "?"}`
+    );
+  }
+
+  console.log("📊 [Question/Gemini CLI] Restante/cota diária: o Gemini CLI não expõe saldo restante no output; só consumo desta chamada.");
+}
+
+function logOllamaTokenStats(scope = "Question/Ollama Local") {
+  if (!lastOllamaStats) {
+    console.log(`📊 [${scope}] Tokens: stats indisponíveis.`);
+    return;
+  }
+
+  console.log(
+    `📊 [${scope}] ${lastOllamaStats.model}: ` +
+    `prompt=${lastOllamaStats.promptTokens ?? "?"}, ` +
+    `output=${lastOllamaStats.outputTokens ?? "?"}, ` +
+    `total=${lastOllamaStats.totalTokens ?? "?"}, ` +
+    `totalDuration=${lastOllamaStats.totalDurationMs ?? "?"}ms`
+  );
+}
+
+async function perguntarGeminiCli(texto) {
+  const startTime = Date.now();
+  console.log(`❓ [Question/Gemini CLI] Iniciando. Modelo: ${GEMINI_CLI_MODEL || "auto"}. Pergunta: "${texto.slice(0, 140)}"`);
+
+  const tempDir = await fs.promises.mkdtemp(path.join(os.tmpdir(), "bottts-gemini-"));
+  const promptPath = path.join(tempDir, "prompt.txt");
+  await fs.promises.writeFile(promptPath, montarPromptQuestion(texto), "utf-8");
+
+  const modelArgs = GEMINI_CLI_MODEL && GEMINI_CLI_MODEL !== "auto"
+    ? ` --model ${JSON.stringify(GEMINI_CLI_MODEL)}`
+    : "";
+  const command = [
+    "$prompt = Get-Content -Raw -LiteralPath $env:BOT_TTS_GEMINI_PROMPT",
+    `$prompt | gemini --skip-trust${modelArgs} --prompt " " --output-format json`
+  ].join("; ");
+
+  let stdout = "";
+  let stderr = "";
+  try {
+    const result = await execFileAsync("powershell.exe", [
+      "-NoProfile",
+      "-ExecutionPolicy",
+      "Bypass",
+      "-Command",
+      command
+    ], {
+      cwd: os.tmpdir(),
+      env: {
+        ...process.env,
+        BOT_TTS_GEMINI_PROMPT: promptPath
+      },
+      timeout: GEMINI_CLI_TIMEOUT_MS,
+      windowsHide: true,
+      maxBuffer: 1024 * 1024
+    });
+    stdout = result.stdout;
+    stderr = result.stderr;
+  } finally {
+    await fs.promises.rm(tempDir, { recursive: true, force: true }).catch(() => null);
+  }
+
+  const jsonOutput = limparAvisosGeminiCli(stdout);
+  let parsed = null;
+  try {
+    parsed = JSON.parse(jsonOutput);
+  } catch (err) {
+    throw new Error(`Gemini CLI retornou JSON inválido: ${err.message}`);
+  }
+
+  const output = (parsed.response || "").trim();
+  if (!output) {
+    throw new Error((stderr || "Gemini CLI não retornou resposta.").trim());
+  }
+  if (/BotTTs|discord\.js|@discordjs|fofocas\.json|gifs\.json|Stable Diffusion|Forge WebUI/i.test(output)
+    && !/BotTTs|discord|bot|c[oó]digo|projeto|reposit[oó]rio/i.test(texto)) {
+    throw new Error("Gemini CLI respondeu sobre o projeto local em vez da pergunta.");
+  }
+
+  const latency = Date.now() - startTime;
+  console.log(`✅ [Question/Gemini CLI] Resposta recebida em ${latency}ms (${output.length} chars).`);
+  logGeminiTokenStats(parsed.stats);
+  return output;
+}
+
+async function perguntarQuestionLocal(texto) {
+  console.log(`❓ [Question/Ollama Local] Usando fallback/local. Pergunta: "${texto.slice(0, 140)}"`);
+  await assertOllamaReady();
+  const startTime = Date.now();
+  const resposta = limparResposta(await pedirRespostaAoOllama([
+    { role: "system", content: montarPromptQuestion("") },
+    { role: "user", content: texto }
+  ], {
+    usarPoliticasDono: false,
+    generationOptions: {
+      temperature: 0.25,
+      num_predict: 260
+    }
+  }));
+  const latency = Date.now() - startTime;
+  console.log(`✅ [Question/Ollama Local] Resposta recebida em ${latency}ms (${resposta.length} chars).`);
+  logOllamaTokenStats();
+  return resposta;
+}
+
+async function perguntarQuestion(texto) {
+  console.log(`❓ [Question] Provider configurado: ${QUESTION_PROVIDER}`);
+  if (QUESTION_PROVIDER === "gemini_cli") {
+    try {
+      return limparResposta(await perguntarGeminiCli(texto));
+    } catch (err) {
+      console.warn(`⚠️ [Question/Gemini CLI] Falhou; usando Ollama local. Erro: ${err.message}`);
+    }
+  }
+
+  return perguntarQuestionLocal(texto);
+}
+
+async function assertLocalService(url, name) {
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 3000);
+  const serviceRoot = new URL(url).origin;
+
+  try {
+    const response = await fetch(url, { signal: controller.signal });
+    if (!response.ok) {
+      throw new Error(`${name} respondeu status ${response.status}`);
+    }
+  } catch (err) {
+    throw new Error(`${name} não está aberto em ${serviceRoot}`);
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
+async function assertOllamaReady() {
+  await assertLocalService(`${OLLAMA_HOST}/api/tags`, "Ollama");
+}
+
+async function assertForgeReady() {
+  await assertLocalService(`${FORGE_HOST}/sdapi/v1/options`, "Forge WebUI");
+}
+
+function scheduleVoiceLeave(guildId) {
+  const session = voiceSessions.get(guildId);
+  if (!session) return;
+
+  clearTimeout(session.leaveTimer);
+  session.leaveTimer = setTimeout(() => {
+    const current = voiceSessions.get(guildId);
+    if (!current) return;
+
+    const elapsedSinceUse = Date.now() - current.lastUsedAt;
+    if (elapsedSinceUse < VOICE_IDLE_TIMEOUT_MS || current.player.state.status !== AudioPlayerStatus.Idle) {
+      scheduleVoiceLeave(guildId);
+      return;
+    }
+
+    current.connection.destroy();
+    voiceSessions.delete(guildId);
+    console.log(`👋 Saí do canal de voz por inatividade (${VOICE_IDLE_TIMEOUT_MS / 1000}s).`);
+  }, VOICE_IDLE_TIMEOUT_MS);
+}
+
+function getVoiceSession(message) {
+  const guildId = message.guild.id;
+  const channelId = message.member.voice.channel.id;
+  const existing = voiceSessions.get(guildId);
+
+  if (existing && existing.channelId === channelId) {
+    clearTimeout(existing.leaveTimer);
+    existing.lastUsedAt = Date.now();
+    return existing;
+  }
+
+  if (existing) {
+    clearTimeout(existing.leaveTimer);
+    existing.connection.destroy();
+    voiceSessions.delete(guildId);
+  }
+
+  const connection = joinVoiceChannel({
+    channelId,
+    guildId,
+    adapterCreator: message.guild.voiceAdapterCreator
+  });
+  const player = createAudioPlayer();
+  connection.subscribe(player);
+
+  const session = { channelId, connection, player, leaveTimer: null, lastUsedAt: Date.now() };
+  voiceSessions.set(guildId, session);
+  return session;
+}
+
+function markVoiceInUse(message) {
+  const existing = voiceSessions.get(message.guild.id);
+  if (!existing) return;
+
+  clearTimeout(existing.leaveTimer);
+  existing.lastUsedAt = Date.now();
+}
+
 function passouCooldown(message) {
   const agora = Date.now();
   const ultimoUser = userCooldown.get(message.author.id) || 0;
@@ -124,6 +432,93 @@ function limparResposta(texto) {
     .replace(/@everyone/g, "everyone")
     .replace(/@here/g, "here")
     .trim();
+}
+
+function limparIdeiaImagem(texto) {
+  return texto
+    .replace(/^\s*(gere|gera|crie|cria|faça|faca|desenhe|desenha|generate|create|make|draw)\s+(uma?\s+)?(imagem|foto|desenho|arte|picture|image|photo)\s+(de|do|da|com|about|of)?\s*/i, "")
+    .trim();
+}
+
+function limparPromptImagem(texto) {
+  return limparResposta(texto)
+    .replace(/^```(?:json|txt)?/i, "")
+    .replace(/```$/i, "")
+    .replace(/^prompt\s*[:=-]\s*/i, "")
+    .replace(/^["'`]+|["'`]+$/g, "")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function promptFallbackImagem(ideia, isAnime) {
+  const base = limparIdeiaImagem(ideia) || ideia;
+
+  if (isAnime) {
+    return `masterpiece anime art, ${base}, clean composition, vibrant colors, detailed, best quality`;
+  }
+
+  return `professional realistic photo, ${base}, sharp focus, natural lighting, high detail`;
+}
+
+function lerPoliticasImagem() {
+  try {
+    return fs.readFileSync(path.join(__dirname, "politicas_imagem.txt"), "utf-8").trim();
+  } catch (e) {
+    console.warn("⚠️ politicas_imagem.txt não encontrado ou não pôde ser lido.");
+    return "";
+  }
+}
+
+async function melhorarPromptImagem(ideiaOriginal, isAnime) {
+  const ideia = limparIdeiaImagem(ideiaOriginal);
+  const estilo = isAnime ? "anime illustration" : "realistic photography";
+  const politicasImagem = lerPoliticasImagem();
+
+  const systemPrompt = `
+You are a Stable Diffusion prompt engineer.
+Your job is to transform short Portuguese or English image ideas into one strong English prompt.
+
+Rules:
+- Reply with ONLY the final prompt, no explanations, no markdown, no quotes.
+- Always write in English.
+- Preserve the user's main subject and intent.
+- Keep the prompt simple and powerful. Do not overload it with many objects.
+- Use this structure: quality/style, main subject, one action/pose, one simple place, one lighting phrase.
+- If the input is vague, add only the most useful missing details.
+- Do not add random celebrities, brands, text, logos, watermarks, or extra people unless requested.
+- Avoid moral commentary. This is prompt engineering, not chat.
+- Keep it under 35 words.
+- Style target: ${estilo}.
+
+Image-only policy/configuration from politicas_imagem.txt:
+${politicasImagem || "No image-only policy configured."}
+
+Examples:
+Input: "Gere uma imagem de um Uruguaiano"
+Output: "professional realistic portrait, adult Uruguayan man, casual streetwear, Montevideo street, golden hour lighting, sharp focus, high detail"
+
+Input: "um guerreiro medieval com espada"
+Output: "cinematic realistic photo, medieval warrior holding a sword, worn armor, battlefield, dramatic cloudy lighting, sharp focus, high detail"
+
+Input: "gato astronauta"
+Output: "cute astronaut cat, floating in a spaceship, detailed space suit, soft cinematic lighting, sharp focus, high detail"
+`.trim();
+
+  try {
+    const resposta = await pedirRespostaAoOllama([
+      { role: "system", content: systemPrompt },
+      { role: "user", content: ideia || ideiaOriginal }
+    ], { usarPoliticasDono: false });
+
+    const promptMelhorado = limparPromptImagem(resposta);
+    if (promptMelhorado && promptMelhorado.length >= 20) {
+      return promptMelhorado;
+    }
+  } catch (e) {
+    console.log("Falha ao melhorar prompt, usando fallback:", e.message);
+  }
+
+  return promptFallbackImagem(ideia || ideiaOriginal, isAnime);
 }
 
 function deveResponder(message) {
@@ -160,9 +555,11 @@ function deveResponder(message) {
   };
 }
 
-async function pedirRespostaAoOllama(messages) {
+async function pedirRespostaAoOllama(messages, options = {}) {
+  const { usarPoliticasDono = true, generationOptions = {} } = options;
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), OLLAMA_TIMEOUT_MS);
+  const mensagensComPoliticas = usarPoliticasDono ? aplicarPoliticasDono(messages) : messages;
 
   const startTime = Date.now();
   try {
@@ -173,13 +570,14 @@ async function pedirRespostaAoOllama(messages) {
       body: JSON.stringify({
         model: OLLAMA_MODEL,
         stream: false,
-        messages,
+        messages: mensagensComPoliticas,
         options: {
           temperature: 0.6,
           top_k: 40,
           top_p: 0.9,
           repeat_penalty: 1.15,
-          num_predict: 120
+          num_predict: 120,
+          ...generationOptions
         }
       })
     });
@@ -190,6 +588,15 @@ async function pedirRespostaAoOllama(messages) {
 
     const data = await response.json();
     const latency = Date.now() - startTime;
+    lastOllamaStats = {
+      model: data.model || OLLAMA_MODEL,
+      promptTokens: data.prompt_eval_count ?? null,
+      outputTokens: data.eval_count ?? null,
+      totalTokens: (data.prompt_eval_count ?? 0) + (data.eval_count ?? 0),
+      totalDurationMs: data.total_duration ? Math.round(data.total_duration / 1_000_000) : latency,
+      promptEvalDurationMs: data.prompt_eval_duration ? Math.round(data.prompt_eval_duration / 1_000_000) : null,
+      evalDurationMs: data.eval_duration ? Math.round(data.eval_duration / 1_000_000) : null
+    };
     console.log(`⏱️ [Texto/Ollama] Latência: ${latency}ms`);
     return data.message?.content || "";
   } finally {
@@ -231,13 +638,6 @@ async function extrairFofocas(channelId) {
 }
 
 async function montarContexto(message, motivo) {
-  let personalidade = "Você é um bot casual.";
-  let politicas = "Seja respeitoso.";
-  try {
-    personalidade = fs.readFileSync(path.join(__dirname, "personalidade.txt"), "utf-8");
-    politicas = fs.readFileSync(path.join(__dirname, "politicas.txt"), "utf-8");
-  } catch (e) { }
-
   let fofocaContexto = "";
   if (message.guild && message.guild.id === process.env.SERVIDOR_FOFOCA) {
     try {
@@ -245,12 +645,6 @@ async function montarContexto(message, motivo) {
       if (fofocas.length > 0) {
         fofocaContexto = "\n\nMEMÓRIA LONGA (Fofocas que você sabe sobre as pessoas deste servidor):\n" + fofocas.join("\n");
       }
-    } catch (e) { }
-
-    // Injetar a personalidade clonada do banana.cdr neste servidor específico
-    try {
-      const perBanana = fs.readFileSync(path.join(__dirname, "personalidade_banana.txt"), "utf-8");
-      fofocaContexto += "\n\nESTILO DE PERSONALIDADE CLONADO (AJA EXATAMENTE ASSIM):\n" + perBanana;
     } catch (e) { }
   }
 
@@ -267,18 +661,12 @@ async function montarContexto(message, motivo) {
     {
       role: "system",
       content: `
-Você PRECISA seguir esta personalidade e regras ESTRITAMENTE:
-
-[PERSONALIDADE]
-${personalidade}
-
-[POLÍTICAS]
-${politicas}${fofocaContexto}
+Use a configuração principal do dono do bot que foi enviada antes deste contexto.${fofocaContexto}
 
 [SITUAÇÃO ATUAL]
 - Motivo da sua fala agora: ${motivo}.
 - O usuário principal é: @${message.author.username}.
-- REGRA CRÍTICA 1: Responda diretamente ao @${message.author.username} com a sua personalidade!
+- REGRA CRÍTICA 1: Responda diretamente ao @${message.author.username}.
 - REGRA CRÍTICA 2: NUNCA diga seu próprio nome no início da frase.
 `
     },
@@ -409,13 +797,32 @@ client.on("messageCreate", async (message) => {
   }
   // ---------------------------
 
-  // O comando agora é "!f"
-  if (message.content.startsWith("!f")) {
-    const texto = message.content.replace("!f", "").trim();
+  // Ajuda: lista comandos sem depender da LLM.
+  if (isCommand(message, ["!help", "!ajuda", "!comandos"])) {
+    return message.reply({
+      content: [
+        "**Comandos da Nana**",
+        "`!help` / `!ajuda` / `!comandos` - mostra esta lista.",
+        "`!ia <texto>` / `!llm <texto>` / `!texto <texto>` - conversa com a IA no modo casual/persona.",
+        "`!question <pergunta>` / `!pergunta <pergunta>` / `!q <pergunta>` - pergunta séria, resposta profissional.",
+        `  Provedor atual do !question: \`${QUESTION_PROVIDER === "gemini_cli" ? "Gemini CLI com fallback local" : "Ollama local"}\`.`,
+        "`!imagem <prompt>` / `!img <prompt>` / `!image <prompt>` - gera imagem realista pelo Forge.",
+        "`!anime <prompt>` - gera imagem em estilo anime pelo Forge.",
+        "`!voz <texto>` / `!f <texto>` / `!voice <texto>` - fala no canal de voz onde você está.",
+        "",
+        "Também respondo quando me mencionam ou falam `nana` / `botbanana`."
+      ].join("\n"),
+      allowedMentions: { repliedUser: false, parse: [] }
+    });
+  }
+
+  // Voz: separado dos comandos de texto/imagem.
+  if (isCommand(message, ["!f", "!voz", "!voice"])) {
+    const texto = getCommandText(message, ["!f", "!voz", "!voice"]);
     if (!texto) {
       // Deleta a mensagem de comando vazia antes de responder
       await message.delete();
-      return message.channel.send("Digite algo para eu falar: `!f Olá mundo`").then(msg => {
+      return message.channel.send("Digite algo para eu falar: `!voz Olá mundo`").then(msg => {
         // Apaga a mensagem de erro do bot depois de 5 segundos
         setTimeout(() => msg.delete(), 5000);
       });
@@ -425,28 +832,32 @@ client.on("messageCreate", async (message) => {
       return message.reply("❌ Você precisa estar em um canal de voz!");
     }
 
-    const connection = joinVoiceChannel({
-      channelId: message.member.voice.channel.id,
-      guildId: message.guild.id,
-      adapterCreator: message.guild.voiceAdapterCreator
-    });
+    markVoiceInUse(message);
 
+    let tempDir = null;
     try {
-      const filePath = "voz.mp3";
+      tempDir = await fs.promises.mkdtemp(path.join(os.tmpdir(), "bottts-voice-"));
+      const filePath = path.join(tempDir, "voz.mp3");
       await message.delete().catch(() => null);
       const provider = await generateSpeech(texto, filePath);
 
       console.log(`▶️  Reproduzindo áudio no canal de voz (${provider})...`);
 
-      const player = createAudioPlayer();
+      const session = getVoiceSession(message);
       const resource = createAudioResource(filePath);
-      player.play(resource);
-      connection.subscribe(player);
+      session.player.play(resource);
+      session.player.once(AudioPlayerStatus.Idle, async () => {
+        await fs.promises.rm(tempDir, { recursive: true, force: true }).catch(() => null);
+        scheduleVoiceLeave(message.guild.id);
+      });
 
     } catch (err) {
       console.error("🔥 Erro ao gerar ou reproduzir a fala:", err);
+      if (tempDir) {
+        await fs.promises.rm(tempDir, { recursive: true, force: true }).catch(() => null);
+      }
       // Envia uma mensagem de erro no canal que também se apaga
-      message.channel.send("⚠️ Erro ao gerar a fala.").then(msg => {
+      message.channel.send(`⚠️ Erro só na voz: ${err.message}`).then(msg => {
         setTimeout(() => msg.delete(), 5000);
       });
     }
@@ -454,39 +865,84 @@ client.on("messageCreate", async (message) => {
     return;
   }
 
-  // Novo comando para geração de imagens (!image e !anime)
-  if (message.content.startsWith("!image") || message.content.startsWith("!anime")) {
-    const isAnime = message.content.startsWith("!anime");
-    const cmd = isAnime ? "!anime" : "!image";
-    const prompt = message.content.replace(cmd, "").trim();
+  // Texto: força uma resposta da LLM sem depender de menção/cooldown.
+  if (isCommand(message, ["!ia", "!llm", "!texto"])) {
+    const texto = getCommandText(message, ["!ia", "!llm", "!texto"]);
+    if (!texto) {
+      return message.reply("Digite uma pergunta: `!ia me explica isso aqui`");
+    }
+
+    try {
+      await assertOllamaReady();
+      const resposta = limparResposta(await pedirRespostaAoOllama([
+        { role: "system", content: "Responda em português do Brasil de forma direta, natural e curta." },
+        { role: "user", content: texto }
+      ]));
+
+      return message.reply({
+        content: resposta || "Não consegui montar uma resposta.",
+        allowedMentions: { repliedUser: false, parse: [] }
+      });
+    } catch (err) {
+      console.error("🔥 Erro no comando de texto:", err);
+      return message.reply("⚠️ Erro só no texto/LLM. Abre o Ollama com `ollama serve`.");
+    }
+  }
+
+  // Pergunta séria: modo suporte profissional, separado da persona de resenha.
+  if (isCommand(message, ["!question", "!pergunta", "!q"])) {
+    const texto = getCommandText(message, ["!question", "!pergunta", "!q"]);
+    if (!texto) {
+      return message.reply("Digite a pergunta: `!question quais são os mapas de Path of Exile?`");
+    }
+
+    if (QUESTION_PROVIDER !== "gemini_cli" && isPerguntaMapasPathOfExile(texto)) {
+      console.log("🧭 [Question/Fixo] Respondendo mapas de Path of Exile sem chamar LLM porque provider não é gemini_cli.");
+      return message.reply({
+        content: respostaMapasPathOfExile(),
+        allowedMentions: { repliedUser: false, parse: [] }
+      });
+    }
+
+    try {
+      const resposta = await perguntarQuestion(texto);
+
+      return message.reply({
+        content: resposta || "Não consegui montar uma resposta.",
+        allowedMentions: { repliedUser: false, parse: [] }
+      });
+    } catch (err) {
+      console.error("🔥 Erro no comando !question:", err);
+      if (isPerguntaMapasPathOfExile(texto)) {
+        console.log("🧭 [Question/Fixo] Usando resposta segura de mapas de Path of Exile após falha do provider.");
+        return message.reply({
+          content: respostaMapasPathOfExile(),
+          allowedMentions: { repliedUser: false, parse: [] }
+        });
+      }
+      return message.reply("⚠️ Erro no modo pergunta. Confere se o Ollama está aberto com `ollama serve`.");
+    }
+  }
+
+  // Imagem: separado dos comandos de texto/voz.
+  if (isCommand(message, ["!image", "!imagem", "!img", "!anime"])) {
+    const isAnime = isCommand(message, ["!anime"]);
+    const cmd = isAnime ? "!anime" : "!imagem";
+    const prompt = getCommandText(message, ["!image", "!imagem", "!img", "!anime"]);
     if (!prompt) {
       return message.reply(`Digite o que você quer desenhar: \`${cmd} um gato cibernético\``);
     }
 
-    const m = await message.channel.send(`🎨 Traduzindo e melhorando a ideia: \`${prompt}\`. Aguarde...`);
+    const m = await message.channel.send("🎨 Melhorando o prompt da imagem. Aguarde...");
 
-    // Melhora e traduz o prompt usando o próprio Ollama
-    let promptEmIngles = prompt;
-    try {
-      let estiloPrompt = isAnime
-        ? "You are an expert anime prompt engineer. Translate the user's idea to English and add high quality anime modifiers like 'masterpiece, best quality, highly detailed anime art, 4k, studio ghibli style, vibrant colors'. Reply ONLY with the final English prompt."
-        : "You are an expert realistic photography prompt engineer. Translate the user's idea to English and add high quality modifiers like 'masterpiece, best quality, highly detailed, 4k, cinematic lighting, photorealistic, 8k resolution, raw photo'. Reply ONLY with the final English prompt.";
-
-      promptEmIngles = await pedirRespostaAoOllama([
-        { role: "system", content: estiloPrompt },
-        { role: "user", content: prompt }
-      ]);
-      // Limpar aspas caso ele responda com aspas
-      promptEmIngles = promptEmIngles.replace(/^"|"$/g, '').trim();
-    } catch (e) {
-      console.log("Falha ao melhorar prompt, usando original", e);
-    }
+    const promptEmIngles = await melhorarPromptImagem(prompt, isAnime);
+    console.log(`🖼️ Prompt melhorado: ${promptEmIngles}`);
 
     // Configuração Dinâmica do Modelo:
     const modelo = isAnime ? "MeinaMix_V11.safetensors" : "DreamShaper_8_pruned.safetensors";
     const negative_prompt = isAnime
-      ? "ugly, bad anatomy, deformed, poorly drawn face, poorly drawn hands, missing fingers, missing limbs, watermark, text, blurry"
-      : "ugly, low quality, bad anatomy, deformed, watermark, extra fingers, mutated hands, poorly drawn, blurry, artifacts";
+      ? "ugly, low quality, bad anatomy, deformed, poorly drawn face, poorly drawn hands, missing fingers, missing limbs, cluttered background, messy composition, watermark, text, blurry"
+      : "ugly, low quality, bad anatomy, deformed, watermark, text, extra fingers, mutated hands, poorly drawn, blurry, artifacts, cluttered background, messy composition";
 
     const payload = {
       prompt: promptEmIngles,
@@ -503,7 +959,8 @@ client.on("messageCreate", async (message) => {
 
     const startTime = Date.now();
     try {
-      const response = await fetch("http://127.0.0.1:7860/sdapi/v1/txt2img", {
+      await assertForgeReady();
+      const response = await fetch(`${FORGE_HOST}/sdapi/v1/txt2img`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload)
@@ -524,7 +981,7 @@ client.on("messageCreate", async (message) => {
       await m.delete().catch(() => null);
     } catch (err) {
       console.error("Erro ao gerar imagem:", err);
-      m.edit(`❌ Erro inesperado ao gerar imagem: ${err.message}`);
+      m.edit(`❌ Erro só na imagem: ${err.message}. Abra o Forge com \`stable-diffusion-webui-forge\\webui-user.bat\`.`);
     }
     return;
   }
