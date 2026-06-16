@@ -1,17 +1,29 @@
-const { ActionRowBuilder, ButtonBuilder, ButtonStyle, ModalBuilder, TextInputBuilder, TextInputStyle } = require("discord.js");
+const { ActionRowBuilder, ButtonBuilder, ButtonStyle, ModalBuilder, TextInputBuilder, TextInputStyle, MessageFlags } = require("discord.js");
+const { getCoins, addCoins, removeCoins } = require("./economy");
+const { getGameMultiplier } = require("./boosts");
 const { pedirRespostaAoOllama, limparResposta } = require("./ollama");
 const { gerarImagemNoForge } = require("./image");
-const { addCoins, removeCoins } = require("./economy");
 const { traduzirParaIngles } = require("./utils");
+const { getPerguntaAleatoria } = require("./quizbank");
 
 // Estado dos jogos em andamento (channelId -> estado)
 const activeAventuras = new Map();
 
+const THEMES = {
+  geral: { name: "🧠 Conhecimentos Gerais", promptMod: "O tema da pergunta deve ser sobre cultura pop, filmes, música, fatos do dia a dia ou entretenimento." },
+  historia: { name: "📜 História e Geografia", promptMod: "O tema da pergunta deve ser sobre eventos históricos importantes, figuras históricas, países, capitais ou curiosidades geográficas." },
+  ciencia: { name: "🔬 Ciências e Exatas", promptMod: "O tema da pergunta deve ser sobre física, astronomia, biologia, química, matemática ou invenções tecnológicas." },
+  geek: { name: "👾 Geek e Jogos", promptMod: "O tema da pergunta deve ser sobre videogames, tecnologia, animes, HQ, ou cultura nerd em geral." },
+  esportes: { name: "⚽ Esportes", promptMod: "O tema da pergunta deve ser sobre futebol, olimpíadas, recordes esportivos, atletas ou regras de esportes." },
+  musica: { name: "🎵 Música", promptMod: "O tema da pergunta deve ser sobre instrumentos musicais, compositores, gêneros, bandas ou teoria musical." },
+  filmes: { name: "🎬 Filmes e Séries", promptMod: "O tema da pergunta deve ser sobre filmes, séries de TV, diretores, atores ou premiações do cinema." }
+};
+
 const DIFFICULTIES = {
-  facil: { name: "Fácil", win: 40, lose: 0, promptMod: "O cenário deve ser engraçado mas óbvio e fácil de resolver." },
-  medio: { name: "Médio", win: 80, lose: 20, promptMod: "O cenário deve ter um nível normal de pegadinha." },
-  dificil: { name: "Difícil", win: 150, lose: 60, promptMod: "O cenário deve ser muito complexo e difícil de deduzir." },
-  infernal: { name: "Infernal", win: 300, lose: 150, promptMod: "Seja cruel. O cenário deve ser quase impossível, bizarro ao extremo e caótico." }
+  facil: { name: "Fácil", win: 40, lose: 0, promptMod: "A pergunta deve ser EXTREMAMENTE FÁCIL e óbvia. Nível ensino fundamental." },
+  medio: { name: "Médio", win: 80, lose: 20, promptMod: "A pergunta deve ter dificuldade média. Nível de conhecimentos normais." },
+  dificil: { name: "Difícil", win: 150, lose: 60, promptMod: "A pergunta deve ser muito difícil e específica. Nível de vestibular ou especialista." },
+  infernal: { name: "Infernal", win: 300, lose: 150, promptMod: "Seja cruel e capcioso. A pergunta deve ser quase impossível, um detalhe minúsculo ou uma pegadinha." }
 };
 
 async function handleAventuraCommand(message) {
@@ -29,12 +41,12 @@ async function handleAventuraCommand(message) {
         .setStyle(ButtonStyle.Primary),
       new ButtonBuilder()
         .setCustomId('rpg_mode_enigma')
-        .setLabel('🕵️‍♂️ Enigma Visual')
+        .setLabel('🧠 Show do Milhão (Trivia)')
         .setStyle(ButtonStyle.Success)
     );
 
   const sentMessage = await message.reply({
-    content: `🌌 **O MULTIVERSO DA LOUCURA** 🌌\n\nEscolha qual modo vocês querem jogar no canal:\n\n**1. Improviso:** A IA cria o cenário e VOCÊS escrevem as ações. As melhores respostas ganham pontos!\n**2. Enigma Visual:** A IA desenha uma bizarrice escondida e vocês têm que deduzir o que é!`,
+    content: `🌌 **O MULTIVERSO DA LOUCURA** 🌌\n\nEscolha qual modo vocês querem jogar no canal:\n\n**1. Improviso:** A IA cria o cenário e VOCÊS escrevem as ações. As melhores respostas ganham pontos!\n**2. Show do Milhão (Trivia):** A IA atua como apresentador de Trivia, gerando uma dica visual e uma pergunta para vocês acertarem!`,
     components: [row]
   });
 
@@ -55,7 +67,7 @@ async function handleRpgInteraction(interaction) {
     if (state.type === 'improviso_writing') {
       const input = interaction.fields.getTextInputValue('rpg_imp_input');
       state.respostas.set(interaction.user.id, input);
-      return interaction.reply({ content: `✅ Sua ação foi enviada secretamente!`, ephemeral: true });
+      return interaction.reply({ content: `✅ Sua ação foi enviada secretamente!`, flags: MessageFlags.Ephemeral });
     }
     return;
   }
@@ -83,20 +95,26 @@ async function handleRpgInteraction(interaction) {
     }
     
     if (customId === 'rpg_mode_enigma') {
-      state.type = 'difficulty';
+      state.type = 'theme';
       state.selectedMode = customId;
 
-      const rowDiff = new ActionRowBuilder()
+      const rowTheme1 = new ActionRowBuilder()
         .addComponents(
-          new ButtonBuilder().setCustomId('rpg_diff_facil').setLabel('Fácil').setStyle(ButtonStyle.Success),
-          new ButtonBuilder().setCustomId('rpg_diff_medio').setLabel('Médio').setStyle(ButtonStyle.Primary),
-          new ButtonBuilder().setCustomId('rpg_diff_dificil').setLabel('Difícil').setStyle(ButtonStyle.Danger),
-          new ButtonBuilder().setCustomId('rpg_diff_infernal').setLabel('Infernal').setStyle(ButtonStyle.Secondary)
+          new ButtonBuilder().setCustomId('rpg_theme_geral').setLabel('🧠 Geral').setStyle(ButtonStyle.Primary),
+          new ButtonBuilder().setCustomId('rpg_theme_historia').setLabel('📜 História/Geo').setStyle(ButtonStyle.Success),
+          new ButtonBuilder().setCustomId('rpg_theme_ciencia').setLabel('🔬 Ciências').setStyle(ButtonStyle.Secondary),
+          new ButtonBuilder().setCustomId('rpg_theme_geek').setLabel('👾 Geek/Jogos').setStyle(ButtonStyle.Danger)
+        );
+      const rowTheme2 = new ActionRowBuilder()
+        .addComponents(
+          new ButtonBuilder().setCustomId('rpg_theme_esportes').setLabel('⚽ Esportes').setStyle(ButtonStyle.Primary),
+          new ButtonBuilder().setCustomId('rpg_theme_musica').setLabel('🎵 Música').setStyle(ButtonStyle.Success),
+          new ButtonBuilder().setCustomId('rpg_theme_filmes').setLabel('🎬 Filmes/Séries').setStyle(ButtonStyle.Danger)
         );
 
       return interaction.update({
-        components: [rowDiff],
-        content: `🌌 Modo **Enigma Visual** selecionado!\n\nAgora escolha a Dificuldade do Multiverso:`
+        components: [rowTheme1, rowTheme2],
+        content: `🌌 Modo **Show do Milhão (Trivia)** selecionado!\n\nAgora escolha o **TEMA** da pergunta:`
       });
     }
   }
@@ -108,13 +126,34 @@ async function handleRpgInteraction(interaction) {
     return iniciarTurnoImproviso(channelId, interaction.channel, nRounds, 1, new Map());
   }
 
-  // Menu de Dificuldade (Enigma)
+  // Menu de Tema (Enigma)
+  if (state.type === 'theme' && customId.startsWith('rpg_theme_')) {
+    const themeKey = customId.split('_')[2];
+    state.selectedTheme = THEMES[themeKey];
+    state.selectedThemeKey = themeKey;
+    state.type = 'difficulty';
+
+    const rowDiff = new ActionRowBuilder()
+      .addComponents(
+        new ButtonBuilder().setCustomId('rpg_diff_facil').setLabel('Fácil').setStyle(ButtonStyle.Success),
+        new ButtonBuilder().setCustomId('rpg_diff_medio').setLabel('Médio').setStyle(ButtonStyle.Primary),
+        new ButtonBuilder().setCustomId('rpg_diff_dificil').setLabel('Difícil').setStyle(ButtonStyle.Danger),
+        new ButtonBuilder().setCustomId('rpg_diff_infernal').setLabel('Infernal').setStyle(ButtonStyle.Secondary)
+      );
+
+    return interaction.update({
+      components: [rowDiff],
+      content: `🌌 Tema **${state.selectedTheme.name}** selecionado!\n\nAgora escolha o **NÍVEL DA DIFICULDADE**: (Cuidado com o Infernal, ele arranca moedas se você errar!)`
+    });
+  }
+
   if (state.type === 'difficulty' && customId.startsWith('rpg_diff_')) {
     const diffKey = customId.split('_')[2];
     const diffObj = DIFFICULTIES[diffKey];
+    state.type = 'generating';
     
-    await interaction.update({ components: [], content: `🔥 Dificuldade **${diffObj.name}** selecionada!\nPreparando a viagem interdimensional...` });
-    return iniciarModoEnigma(channelId, interaction.channel, diffObj);
+    await interaction.update({ components: [], content: `🔥 Tema **${state.selectedTheme.name}** | Dificuldade **${diffObj.name}** selecionada!\nPreparando a viagem interdimensional...` });
+    return iniciarModoEnigma(channelId, interaction.channel, state.selectedTheme, diffObj, state.selectedThemeKey, diffKey);
   }
 
   // Jogando Enigma
@@ -122,9 +161,9 @@ async function handleRpgInteraction(interaction) {
     const resposta = parseInt(customId.split('_')[2], 10);
     if (!state.votos.has(interaction.user.id)) {
       state.votos.set(interaction.user.id, resposta);
-      return interaction.reply({ content: `Seu palpite foi registrado! 🤫`, ephemeral: true });
+      return interaction.reply({ content: `Seu palpite foi registrado! 🤫`, flags: MessageFlags.Ephemeral });
     } else {
-      return interaction.reply({ content: `Você já votou! Aguarde o resultado.`, ephemeral: true });
+      return interaction.reply({ content: `Você já votou! Aguarde o resultado.`, flags: MessageFlags.Ephemeral });
     }
   }
 
@@ -154,9 +193,9 @@ async function handleRpgInteraction(interaction) {
     
     if (!state.votos.has(interaction.user.id)) {
       state.votos.set(interaction.user.id, voteId);
-      return interaction.reply({ content: `✅ Voto registrado na opção ${voteId}!`, ephemeral: true });
+      return interaction.reply({ content: `✅ Voto registrado na opção ${voteId}!`, flags: MessageFlags.Ephemeral });
     } else {
-      return interaction.reply({ content: `Você já votou! Aguarde.`, ephemeral: true });
+      return interaction.reply({ content: `Você já votou! Aguarde.`, flags: MessageFlags.Ephemeral });
     }
   }
 }
@@ -420,50 +459,79 @@ CENARIO: [O texto curto da zoeira em português, citando o nome do jogador e ter
 }
 
 // ==========================================
-// MODO 2: ENIGMA VISUAL (Mantido)
+// MODO 2: TRIVIA / SHOW DO MILHÃO
 // ==========================================
-async function iniciarModoEnigma(channelId, channel, diff) {
+async function iniciarModoEnigma(channelId, channel, themeObj, diffObj, themeKey, diffKey) {
   activeAventuras.set(channelId, { type: 'generating' });
 
-  const promptOllama = `
-Gere um cenário curioso, inusitado ou engraçado, mas sem ser exageradamente bizarro (exemplo: um cachorro de óculos lendo jornal, ou uma vovó andando de skate).
-O objetivo é um jogo de adivinhação. O usuário SÓ vai ver a imagem desse cenário.
-Dificuldade solicitada: ${diff.promptMod}
-Me retorne EXATAMENTE neste formato de 5 linhas e mais nada:
-
-PROMPT_IMAGEM: [Prompt em inglês, detalhado, fotorealista e focado no cenário inusitado para o Stable Diffusion]
-VERDADEIRA: [1 frase CURTA (máximo 12 palavras) em português descrevendo corretamente a cena]
-FALSA_1: [1 frase CURTA em português descrevendo uma cena diferente mas engraçada]
-FALSA_2: [1 frase CURTA em português descrevendo outra cena diferente]
-FALSA_3: [1 frase CURTA em português descrevendo outra cena diferente]
-  `.trim();
-
   try {
-    const resposta = await pedirRespostaAoOllama(
-      [{ role: "user", content: promptOllama }],
-      { usarPoliticasDono: false, generationOptions: { num_predict: 400 } }
-    );
-    const resLimpa = limparResposta(resposta);
+    // Tenta pegar uma pergunta do banco pré-configurado primeiro
+    const bancoQ = getPerguntaAleatoria(channelId, themeKey, diffKey);
 
-    const pImgMatch = resLimpa.match(/PROMPT_IMAGEM:\s*([^\n]+)/i);
-    const vMatch = resLimpa.match(/VERDADEIRA:\s*([^\n]+)/i);
-    const f1Match = resLimpa.match(/FALSA_1:\s*([^\n]+)/i);
-    const f2Match = resLimpa.match(/FALSA_2:\s*([^\n]+)/i);
-    const f3Match = resLimpa.match(/FALSA_3:\s*([^\n]+)/i);
+    let pergunta, promptImg, verdadeira, f1, f2, f3;
 
-    const promptImg = pImgMatch ? pImgMatch[1].trim() : "";
-    const verdadeira = vMatch ? vMatch[1].trim() : "";
-    const f1 = f1Match ? f1Match[1].trim() : "";
-    const f2 = f2Match ? f2Match[1].trim() : "";
-    const f3 = f3Match ? f3Match[1].trim() : "";
+    if (bancoQ) {
+      // Usa pergunta do banco (rápido, confiável, sem dependência do Ollama)
+      pergunta = bancoQ.p;
+      promptImg = bancoQ.img;
+      verdadeira = bancoQ.v;
+      [f1, f2, f3] = bancoQ.f;
+      console.log(`📋 [ShowDoMilhão] Usando pergunta do banco: "${pergunta}"`);
+    } else {
+      // Fallback: gera com Ollama se o banco não tiver perguntas para essa combinação
+      console.log(`🤖 [ShowDoMilhão] Banco vazio para ${themeKey}/${diffKey}, usando Ollama...`);
+      const promptOllama = `
+Você é o apresentador de um jogo de conhecimentos gerais estilo Show do Milhão.
+Diretriz de Tema: ${themeObj.promptMod}
+Dificuldade solicitada: ${diffObj.promptMod}
+Me retorne EXATAMENTE neste formato de 6 linhas e mais nada:
 
-    if (!promptImg || !verdadeira || !f1 || !f2 || !f3) {
-      console.log("Raw LLM:", resposta);
-      throw new Error("A IA não seguiu a formatação exigida.");
+PERGUNTA: [O texto da pergunta em português (máximo 15 palavras)]
+PROMPT_IMAGEM: [Prompt em INGLÊS detalhado para o Stable Diffusion gerar uma ilustração visual. NÃO inclua texto. Apenas arte ou cenários. NÃO gere pessoas ou rostos.]
+VERDADEIRA: [1 resposta correta CURTA (máximo 5 palavras)]
+FALSA_1: [1 resposta incorreta CURTA (máximo 5 palavras)]
+FALSA_2: [1 resposta incorreta CURTA (máximo 5 palavras)]
+FALSA_3: [1 resposta incorreta CURTA (máximo 5 palavras)]
+      `.trim();
+
+      const resposta = await pedirRespostaAoOllama(
+        [{ role: "user", content: promptOllama }],
+        { usarPoliticasDono: false, generationOptions: { num_predict: 400 } }
+      );
+      const resLimpa = limparResposta(resposta);
+
+      const pMatch = resLimpa.match(/PERGUNTA:\s*([^\n]+)/i);
+      const pImgMatch = resLimpa.match(/PROMPT_IMAGE[MN]?:\s*([^\n]+)/i);
+      const vMatch = resLimpa.match(/VERDADEIR[A-Z_]*:\s*([^\n]+)/i);
+      const f1Match = resLimpa.match(/FAL[A-Z_]*1:\s*([^\n]+)/i);
+      const f2Match = resLimpa.match(/FAL[A-Z_]*2:\s*([^\n]+)/i);
+      const f3Match = resLimpa.match(/FAL[A-Z_]*3:\s*([^\n]+)/i);
+
+      pergunta = pMatch ? pMatch[1].trim() : "";
+      promptImg = pImgMatch ? pImgMatch[1].trim() : "";
+      verdadeira = vMatch ? vMatch[1].trim() : "";
+      f1 = f1Match ? f1Match[1].trim() : "";
+      f2 = f2Match ? f2Match[1].trim() : "";
+      f3 = f3Match ? f3Match[1].trim() : "";
+
+      if (!pergunta || !promptImg || !verdadeira || !f1 || !f2 || !f3) {
+        console.log("Raw LLM:", resposta);
+        throw new Error("A IA não seguiu a formatação exigida.");
+      }
     }
 
-    const msg = await channel.send("🎨 A IA está pintando a tela do Enigma...");
-    const attachment = await gerarImagemNoForge(promptImg, false);
+    const msg = await channel.send("🎨 Preparando a pergunta e gerando a dica visual...");
+
+    // Gerar imagem com prompt em inglês + anti-portrait negative
+    let attachment;
+    try {
+      const fullPrompt = `${promptImg}, high quality, sharp detail, vibrant colors, professional photography, masterpiece, no text, no watermark`;
+      const antiPortraitNegative = "woman, girl, man, boy, face, portrait, person, human face, selfie, headshot, asian, korean, japanese, close-up face";
+      attachment = await gerarImagemNoForge(fullPrompt, false, antiPortraitNegative);
+    } catch (imgErr) {
+      console.error("Erro ao gerar imagem do Show do Milhão:", imgErr);
+      attachment = null;
+    }
 
     // Embaralhar opções
     const opcoes = [
@@ -485,16 +553,19 @@ FALSA_3: [1 frase CURTA em português descrevendo outra cena diferente]
       new ButtonBuilder().setCustomId('rpg_enigma_3').setLabel('Opção 4').setStyle(ButtonStyle.Primary)
     );
 
-    let txtOpcoes = `> 🔵 **OPÇÃO 1:**\n> *${opcoes[0].texto}*\n\n> 🔵 **OPÇÃO 2:**\n> *${opcoes[1].texto}*\n\n> 🔵 **OPÇÃO 3:**\n> *${opcoes[2].texto}*\n\n> 🔵 **OPÇÃO 4:**\n> *${opcoes[3].texto}*`;
+    let txtOpcoes = `> 🔵 **OPÇÃO 1:** *${opcoes[0].texto}*\n> 🔵 **OPÇÃO 2:** *${opcoes[1].texto}*\n> 🔵 **OPÇÃO 3:** *${opcoes[2].texto}*\n> 🔵 **OPÇÃO 4:** *${opcoes[3].texto}*`;
 
     const endTime = Math.floor(Date.now() / 1000) + 45;
 
     await msg.delete().catch(() => null);
-    const enigmaMsg = await channel.send({
-      content: `🕵️‍♂️ **ENIGMA VISUAL** 🕵️‍♂️\nOlhe atentamente para o que a IA gerou.\nO que diabos está acontecendo nessa cena?\n\n${txtOpcoes}\n\n⏳ **O tempo se esgota em:** <t:${endTime}:R>\n🚨 **A OPÇÃO MAIS VOTADA PELO GRUPO VENCE!** 🚨`,
-      files: [attachment],
+
+    const sendPayload = {
+      content: `🧠 **SHOW DO MILHÃO** 🧠\n📂 Tema: **${themeObj.name}** | 🎯 Dificuldade: **${diffObj.name}**\n\n**${pergunta}**\n\n${txtOpcoes}\n\n⏳ **O tempo se esgota em:** <t:${endTime}:R>`,
       components: [row1, row2]
-    });
+    };
+    if (attachment) sendPayload.files = [attachment];
+
+    const enigmaMsg = await channel.send(sendPayload);
 
     activeAventuras.set(channelId, {
       type: 'enigma_playing',
@@ -509,28 +580,35 @@ FALSA_3: [1 frase CURTA em português descrevendo outra cena diferente]
 
       activeAventuras.delete(channelId);
 
-      await enigmaMsg.edit({ components: [] }).catch(() => null);
+      await enigmaMsg.edit({
+        components: [],
+        content: `🧠 **SHOW DO MILHÃO** 🧠\n📂 Tema: **${themeObj.name}** | 🎯 Dificuldade: **${diffObj.name}**\n\n**${pergunta}**\n\n${txtOpcoes}\n\n⏳ **O tempo se esgotou!**`
+      }).catch(() => null);
 
-      let vencedores = [];
+      let vencedoresArray = [];
+
       state.votos.forEach((voto, userId) => {
         if (voto === corretaIndex) {
-          vencedores.push(`<@${userId}>`);
-          addCoins(userId, diff.win);
+          const mult = getGameMultiplier(userId);
+          const reward = diffObj.win * mult;
+          addCoins(userId, reward);
+          const nameTag = mult > 1 ? `<@${userId}> *(x${mult} Boost = ${reward} 🪙)*` : `<@${userId}>`;
+          vencedoresArray.push(nameTag);
         } else {
-          if (diff.lose > 0) removeCoins(userId, diff.lose);
+          if (diffObj.lose > 0) removeCoins(userId, diffObj.lose);
         }
       });
 
       let resultText = `⏰ **TEMPO ESGOTADO!**\n\nA resposta correta era a **Opção ${corretaIndex + 1}**: *${opcoes[corretaIndex].texto}*!\n\n`;
 
-      if (vencedores.length > 0) {
-        resultText += `🎉 **ACERTARAM E GANHARAM ${diff.win} Nanacoins 🪙:** ${vencedores.join(', ')}`;
+      if (vencedoresArray.length > 0) {
+        resultText += `🎉 **ACERTARAM E GANHARAM (Base ${diffObj.win} 🪙):** ${vencedoresArray.join(', ')}`;
       } else {
         resultText += `💀 **TODO MUNDO ERROU!** Ninguém ganhou.`;
       }
 
-      if (diff.lose > 0) {
-        resultText += `\n*Nota: Quem errou perdeu ${diff.lose} Nanacoins por jogar na dificuldade ${diff.name}.*`;
+      if (diffObj.lose > 0) {
+        resultText += `\n*Nota: Quem errou perdeu ${diffObj.lose} Nanacoins por jogar na dificuldade ${diffObj.name}.*`;
       }
 
       channel.send(resultText);

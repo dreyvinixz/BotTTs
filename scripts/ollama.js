@@ -79,6 +79,12 @@ async function pedirRespostaAoOllama(messages, options = {}) {
 
     console.log(`⏱️ [Texto/Ollama] Latência: ${latency}ms`);
     return data.message?.content || "";
+  } catch (err) {
+    if (err.name === "AbortError") {
+      console.error(`⌛ [Ollama] Timeout atingido após ${config.OLLAMA_TIMEOUT_MS}ms. O modelo demorou muito para responder!`);
+      throw new Error("O modelo demorou muito para responder (Timeout).");
+    }
+    throw err;
   } finally {
     clearTimeout(timeout);
   }

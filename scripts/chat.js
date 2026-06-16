@@ -13,7 +13,7 @@ function textoChamaBot(conteudo) {
 }
 
 function formatUserForContext(msg) {
-  return `@${msg.author.username} (id:${msg.author.id}): ${msg.content}`;
+  return `${msg.author.username}: ${msg.content}`;
 }
 
 function passouCooldown(message) {
@@ -170,10 +170,10 @@ Use a configuração principal do dono do bot que foi enviada antes deste contex
 
 [SITUAÇÃO ATUAL]
 - Motivo da sua fala agora: ${motivo}.
-- O usuário principal é: @${message.author.username} (id:${message.author.id}).
+- O usuário principal é: @${message.author.username}.
 - REGRA CRÍTICA 1: Responda diretamente ao @${message.author.username}.
-- REGRA CRÍTICA 2: NUNCA diga seu próprio nome no início da frase.
-- REGRA CRÍTICA 3: Você é o bot ${message.client.user.username} (id:${message.client.user.id}). Todos os outros participantes com IDs diferentes são usuários humanos. Nunca se confunda com nenhum usuário humano, independentemente do nome deles.
+- REGRA CRÍTICA 2: NUNCA diga seu próprio nome no início da frase e NUNCA imite o formato "usuario: mensagem".
+- REGRA CRÍTICA 3: Você é o bot ${message.client.user.username}. NUNCA crie falas para outros usuários. Apenas responda com a SUA fala, sem prefixos.
 `
     },
     ...formatHistorico
@@ -189,6 +189,8 @@ async function responderComOllama(message, motivo) {
   resposta = resposta.replace(/^(?:Nana|BotBanana|[^:]+)\s*[:]\s*/i, "");
   resposta = resposta.replace(/^Nana,\s*/i, "");
   resposta = resposta.replace(new RegExp(`^${message.author.username}[,:]?\\s*`, "i"), "");
+  resposta = resposta.replace(/^@[^:]+:\s*/i, ""); // Remove se imitar outro usuario
+  resposta = resposta.replace(/^[0-9]+\):\s*/, ""); // Remove restos de IDs ex: 12345):
   resposta = resposta.replace(/^["']|["']$/g, "").trim();
 
   let enviarGif = false;

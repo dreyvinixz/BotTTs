@@ -92,9 +92,12 @@ Output: "cute astronaut cat, floating in a spaceship, detailed space suit, soft 
   return promptFallbackImagem(ideia || ideiaOriginal, isAnime);
 }
 
-async function gerarImagemNoForge(promptEmIngles, isAnime) {
+async function gerarImagemNoForge(promptEmIngles, isAnime, customNegativePrompt) {
   const modelo = isAnime ? config.FORGE_ANIME_MODEL : config.FORGE_REALISTIC_MODEL;
-  const negative_prompt = isAnime ? config.FORGE_ANIME_NEGATIVE_PROMPT : config.FORGE_REALISTIC_NEGATIVE_PROMPT;
+  let negative_prompt = isAnime ? config.FORGE_ANIME_NEGATIVE_PROMPT : config.FORGE_REALISTIC_NEGATIVE_PROMPT;
+  if (customNegativePrompt) {
+    negative_prompt = customNegativePrompt + ", " + negative_prompt;
+  }
 
   const payload = {
     prompt: promptEmIngles,
