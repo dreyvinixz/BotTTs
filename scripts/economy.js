@@ -1,6 +1,7 @@
 const fs = require("fs");
 const fsPromises = require("fs").promises;
 const config = require("./config");
+const { EmbedBuilder } = require("discord.js");
 
 let db = {};
 
@@ -75,6 +76,7 @@ carregarEconomia();
 
 function getTopPlayers(limit = 10) {
   return Object.entries(db)
+    .filter(([id]) => id !== 'teste_user_id') // Remove o usuário de teste do ranking
     .sort((a, b) => b[1] - a[1]) // sort descending by balance
     .slice(0, limit)
     .map(([id, balance]) => ({ id, balance }));
@@ -84,10 +86,40 @@ async function handleDoarCommand(message, text) {
   const userId = message.author.id;
   const args = text.split(/\s+/);
   const mentions = message.mentions.users;
-  const targetUser = mentions.first();
+  let targetUser = mentions.first();
 
-  if (!targetUser || args.length < 2) {
-    return message.reply("Uso correto: `!doar @Pessoa <valor>` ou `!trade @Pessoa <valor>`");
+  let amountText = args[1];
+  let targetQuery = args[0];
+
+  if (!targetUser && args.length >= 2) {
+    targetQuery = args[0].trim().toLowerCase();
+    amountText = args[1];
+
+    targetUser = message.client.users.cache.find(u => 
+      u.id === targetQuery || 
+      u.username.toLowerCase() === targetQuery || 
+      (u.globalName && u.globalName.toLowerCase() === targetQuery)
+    );
+
+    if (message.channel.id === '1348716118981742592' && targetQuery === 'teste') {
+      targetUser = { id: 'teste_user_id', username: 'Zezinho do Teste', bot: false };
+    } else {
+      if (!targetUser) {
+        for (const guild of message.client.guilds.cache.values()) {
+          try {
+            const members = await guild.members.fetch({ query: targetQuery, limit: 1 });
+            if (members.size > 0) {
+              targetUser = members.first().user;
+              break;
+            }
+          } catch (err) {}
+        }
+      }
+    }
+  }
+
+  if (!targetUser || !amountText) {
+    return message.reply("Uso correto: `!doar @Pessoa <valor>` ou `!trade nome.usuario <valor>`");
   }
 
   if (targetUser.id === userId) {
@@ -98,7 +130,6 @@ async function handleDoarCommand(message, text) {
     return message.reply("Bots não precisam de dinheiro!");
   }
 
-  let amountText = args[1];
   if (amountText.startsWith('<@')) amountText = args[0];
   
   const amount = parseInt(amountText, 10);
@@ -114,7 +145,19 @@ async function handleDoarCommand(message, text) {
   removeCoins(userId, amount);
   addCoins(targetUser.id, amount);
 
-  return message.reply(`💸 **TRANSFERÊNCIA BANCÁRIA** 💸\n${message.author.username} foi muito gentil e doou **${amount} Nanacoins 🪙** para ${targetUser.username}!`);
+  const receiptEmbed = new EmbedBuilder()
+    .setColor('#00FF00') // Verde claro
+    .setTitle('💸 COMPROVANTE DE TRANSFERÊNCIA 💸')
+    .setDescription('A transação via Pix/Wire foi concluída com sucesso.')
+    .addFields(
+      { name: 'Remetente', value: `**${message.author.username}**`, inline: true },
+      { name: 'Destinatário', value: `**${targetUser.username}**`, inline: true },
+      { name: 'Valor Transferido', value: `\`🪙 ${formatCoins(amount)} Nanacoins\``, inline: false }
+    )
+    .setTimestamp()
+    .setFooter({ text: 'Banco Central Nanacoin - Transação Autorizada' });
+
+  return message.reply({ embeds: [receiptEmbed] });
 }
 
 function formatCoins(amount) {

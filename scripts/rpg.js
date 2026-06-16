@@ -5,6 +5,7 @@ const { pedirRespostaAoOllama, limparResposta } = require("./ollama");
 const { gerarImagemNoForge } = require("./image");
 const { traduzirParaIngles } = require("./utils");
 const { getPerguntaAleatoria } = require("./quizbank");
+const { getCenarioAleatorio } = require("./improvisobank");
 
 // Estado dos jogos em andamento (channelId -> estado)
 const activeAventuras = new Map();
@@ -54,6 +55,40 @@ async function handleAventuraCommand(message) {
   activeAventuras.set(channelId, {
     type: 'menu',
     messageId: sentMessage.id
+  });
+}
+
+async function handleAventuraCommandMenu(interaction) {
+  const channelId = interaction.channelId;
+
+  if (activeAventuras.has(channelId)) {
+    return interaction.reply({ content: "❌ Já existe uma aventura acontecendo neste canal! Termine a atual primeiro.", flags: MessageFlags.Ephemeral });
+  }
+
+  const row = new ActionRowBuilder()
+    .addComponents(
+      new ButtonBuilder()
+        .setCustomId('rpg_mode_improviso')
+        .setLabel('🎭 Improviso (Escrita)')
+        .setStyle(ButtonStyle.Primary),
+      new ButtonBuilder()
+        .setCustomId('rpg_mode_enigma')
+        .setLabel('🧠 Show do Milhão (Trivia)')
+        .setStyle(ButtonStyle.Success)
+    );
+
+  await interaction.update({
+    content: `🌌 **O MULTIVERSO DA LOUCURA** 🌌\n\nEscolha qual modo vocês querem jogar no canal:\n\n**1. Improviso:** A IA cria o cenário e VOCÊS escrevem as ações. As melhores respostas ganham pontos!\n**2. Show do Milhão (Trivia):** A IA atua como apresentador de Trivia, gerando uma dica visual e uma pergunta para vocês acertarem!`,
+    embeds: [],
+    components: [row]
+  });
+
+  const message = await interaction.fetchReply();
+
+  // Salvar no estado para ouvir o clique inicial
+  activeAventuras.set(channelId, {
+    type: 'menu',
+    messageId: message.id
   });
 }
 
@@ -206,66 +241,30 @@ async function handleRpgInteraction(interaction) {
 async function iniciarTurnoImproviso(channelId, channel, maxRounds, currentRound, globalScores) {
   activeAventuras.set(channelId, { type: 'generating' });
 
-  let nomesParaZoeira = "os jogadores do chat";
+  // Pega nomes dos jogadores no canal para a zoeira
+  let nomesDisponiveis = [];
   if (channel.isTextBased() && channel.guild) {
      const members = Array.from(channel.members.values()).filter(m => !m.user.bot).map(m => m.user.username);
      if (members.length > 0) {
-        // Pega até 5 nomes aleatórios para não poluir muito
-        const shuffled = members.sort(() => 0.5 - Math.random()).slice(0, 5);
-        nomesParaZoeira = shuffled.join(", ");
+        nomesDisponiveis = members.sort(() => 0.5 - Math.random());
      }
   }
-
-  const promptOllama = `
-Você é o mestre de um jogo de improviso no estilo Jackbox Party.
-Seu objetivo é focar em UM dos jogadores e criar uma fofoca divertida ou um MISTÉRIO leve do cotidiano, onde o final está faltando para os outros jogadores inventarem.
-Priorize situações curiosas, engraçadas e embaraçosas do dia a dia (evite coisas extremamente absurdas ou surreais).
-
-Exemplos de ESTILO (NÃO COPIE ELES, CRIE UM CENÁRIO 100% INÉDITO AGORA):
-- "[Nome] foi pego escondendo algo no escritório do chefe. O que ele estava escondendo?"
-- "[Nome] mandou uma mensagem no grupo da família e apagou correndo. O que estava escrito?"
-- "[Nome] tropeçou na rua e deixou cair algo muito constrangedor da mochila. O que era?"
-
-(ESCOLHA APENAS UM destes nomes para ser a vítima da rodada: ${nomesParaZoeira}).
-
-REGRAS CRÍTICAS:
-1. SEJA CRIATIVO! Crie uma situação completamente nova, simples e do cotidiano.
-2. NUNCA REVELE O SEGREDO! Deixe o motivo, a ação ou o objeto em aberto para os jogadores inventarem!
-3. SEJA BREVE! O cenário deve ter no máximo 2 frases curtas.
-4. Termine SEMPRE o cenário com uma pergunta (Ex: "O que era?", "O que ele fez?", "Por quê?").
-5. Pare de escrever IMEDIATAMENTE após a pergunta. Não dê respostas!
-6. Retorne EXATAMENTE o formato abaixo e não adicione mais nenhum texto:
-
-PROMPT_IMAGEM: [Prompt em inglês divertido para o Stable Diffusion. ATENÇÃO: NÃO use o nome da pessoa aqui! Use "a funny guy", "a person". Ex: funny meme, guy doing something stupid]
-CENARIO: [O texto curto da zoeira em português, citando o nome do jogador e terminando com a pergunta em aberto]
-  `.trim();
+  const nomeVitima = nomesDisponiveis.length > 0 ? nomesDisponiveis[0] : "Alguém misterioso";
 
   try {
-    const msg = await channel.send(`📜 (Rodada ${currentRound}/${maxRounds}) A IA está abrindo um novo Universo...`);
-    const resposta = await pedirRespostaAoOllama(
-      [{ role: "user", content: promptOllama }],
-      { usarPoliticasDono: false, generationOptions: { num_predict: 400 } }
-    );
-    const resLimpa = limparResposta(resposta).replace(/```.*/g, "");
+    const msg = await channel.send(`📜 (Rodada ${currentRound}/${maxRounds}) Abrindo um novo Universo...`);
 
-    const pImgMatch = resLimpa.match(/(?:PROMPT)[A-Z_ ]*:\s*(?:\*\*)?\s*([^\n]+)/i);
-    let promptImg = pImgMatch ? pImgMatch[1].trim() : "absurd hilarious situation, weird meme, masterpiece";
+    // Usa o banco de cenários pré-configurado (sem depender do Ollama)
+    const { cenario, img: promptImg } = getCenarioAleatorio(channelId, nomeVitima);
 
-    const cenMatch = resLimpa.match(/(?:CEN[AÁ]RIO|CENARIO|SCENARIO)[A-Z_ ]*:\s*(?:\*\*)?\s*([\s\S]*)/i);
-    let cenario = "";
-
-    if (cenMatch) {
-       cenario = cenMatch[1].split(/PROMPT/i)[0].trim();
-    } else {
-       console.warn("⚠️ A IA esqueceu a tag CENARIO. Usando extrator por exclusão.");
-       // O cenário é tudo o que sobrar depois de apagar a linha do prompt de imagem
-       cenario = resLimpa.replace(/(?:PROMPT)[A-Z_ ]*:\s*(?:\*\*)?\s*[^\n]+/i, "").trim();
+    // Tenta gerar a imagem no Forge (opcional, jogo continua se falhar)
+    let attachment = null;
+    try {
+      attachment = await gerarImagemNoForge(promptImg + ", funny cartoon style, vibrant colors, no text", false);
+    } catch (imgErr) {
+      console.log("⚠️ Forge offline no Improviso, prosseguindo sem imagem.", imgErr.message);
     }
 
-    if (!cenario) cenario = "Uma fofoca inexplicável aconteceu, mas os registros foram apagados. O que foi?";
-
-    // Pinta a imagem do cenário no background
-    const attachment = await gerarImagemNoForge(promptImg, false);
     const endTimeWrite = Math.floor(Date.now() / 1000) + 45;
 
     const rowWrite = new ActionRowBuilder().addComponents(
@@ -273,11 +272,14 @@ CENARIO: [O texto curto da zoeira em português, citando o nome do jogador e ter
     );
 
     await msg.delete().catch(() => null);
-    const survMsg = await channel.send({
+
+    const sendPayload = {
       content: `🌌 **IMPROVISO - RODADA ${currentRound}** 🌌\n\n${cenario}\n\n⏳ **TEMPO PARA ESCREVER:** <t:${endTimeWrite}:R>\nClique no botão abaixo para digitar sua ação anonimamente!`,
-      files: [attachment],
       components: [rowWrite]
-    });
+    };
+    if (attachment) sendPayload.files = [attachment];
+
+    const survMsg = await channel.send(sendPayload);
 
     activeAventuras.set(channelId, {
       type: 'improviso_writing',
@@ -488,10 +490,10 @@ Me retorne EXATAMENTE neste formato de 6 linhas e mais nada:
 
 PERGUNTA: [O texto da pergunta em português (máximo 15 palavras)]
 PROMPT_IMAGEM: [Prompt em INGLÊS detalhado para o Stable Diffusion gerar uma ilustração visual. NÃO inclua texto. Apenas arte ou cenários. NÃO gere pessoas ou rostos.]
-VERDADEIRA: [1 resposta correta CURTA (máximo 5 palavras)]
-FALSA_1: [1 resposta incorreta CURTA (máximo 5 palavras)]
-FALSA_2: [1 resposta incorreta CURTA (máximo 5 palavras)]
-FALSA_3: [1 resposta incorreta CURTA (máximo 5 palavras)]
+VERDADEIRA: [1 resposta correta CURTA (máximo 5 palavras). NÃO inclua explicações, parênteses ou justificativas. Apenas o termo ou número.]
+FALSA_1: [1 resposta incorreta CURTA. Sem parênteses.]
+FALSA_2: [1 resposta incorreta CURTA. Sem parênteses.]
+FALSA_3: [1 resposta incorreta CURTA. Sem parênteses.]
       `.trim();
 
       const resposta = await pedirRespostaAoOllama(
@@ -509,10 +511,10 @@ FALSA_3: [1 resposta incorreta CURTA (máximo 5 palavras)]
 
       pergunta = pMatch ? pMatch[1].trim() : "";
       promptImg = pImgMatch ? pImgMatch[1].trim() : "";
-      verdadeira = vMatch ? vMatch[1].trim() : "";
-      f1 = f1Match ? f1Match[1].trim() : "";
-      f2 = f2Match ? f2Match[1].trim() : "";
-      f3 = f3Match ? f3Match[1].trim() : "";
+      verdadeira = vMatch ? vMatch[1].replace(/\s*\(.*?\)/g, '').trim() : "";
+      f1 = f1Match ? f1Match[1].replace(/\s*\(.*?\)/g, '').trim() : "";
+      f2 = f2Match ? f2Match[1].replace(/\s*\(.*?\)/g, '').trim() : "";
+      f3 = f3Match ? f3Match[1].replace(/\s*\(.*?\)/g, '').trim() : "";
 
       if (!pergunta || !promptImg || !verdadeira || !f1 || !f2 || !f3) {
         console.log("Raw LLM:", resposta);
@@ -532,6 +534,12 @@ FALSA_3: [1 resposta incorreta CURTA (máximo 5 palavras)]
       console.error("Erro ao gerar imagem do Show do Milhão:", imgErr);
       attachment = null;
     }
+
+    // Limpeza final de parênteses para todas as opções (Ollama ou Banco)
+    verdadeira = verdadeira.replace(/\s*\(.*?\)/g, '').trim();
+    f1 = f1.replace(/\s*\(.*?\)/g, '').trim();
+    f2 = f2.replace(/\s*\(.*?\)/g, '').trim();
+    f3 = f3.replace(/\s*\(.*?\)/g, '').trim();
 
     // Embaralhar opções
     const opcoes = [
@@ -595,7 +603,8 @@ FALSA_3: [1 resposta incorreta CURTA (máximo 5 palavras)]
           const nameTag = mult > 1 ? `<@${userId}> *(x${mult} Boost = ${reward} 🪙)*` : `<@${userId}>`;
           vencedoresArray.push(nameTag);
         } else {
-          if (diffObj.lose > 0) removeCoins(userId, diffObj.lose);
+          const penalty = Math.min(getCoins(userId), diffObj.lose);
+          if (penalty > 0) removeCoins(userId, penalty);
         }
       });
 
@@ -624,5 +633,6 @@ FALSA_3: [1 resposta incorreta CURTA (máximo 5 palavras)]
 
 module.exports = {
   handleAventuraCommand,
+  handleAventuraCommandMenu,
   handleRpgInteraction
 };

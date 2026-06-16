@@ -1,4 +1,4 @@
-const { Client, GatewayIntentBits } = require("discord.js");
+const { Client, GatewayIntentBits, EmbedBuilder } = require("discord.js");
 const config = require("./config");
 const { isCommand, getCommandText } = require("./utils");
 const { assertOllamaReady } = require("./services");
@@ -18,9 +18,10 @@ const {
 } = require("./chat");
 const { handleForcaCommand, handleForcaThemeInteraction, checkForcaGuess, checkAndSpawnEvent, handleEventInteraction } = require("./games");
 const { getCoins, getTopPlayers, handleDoarCommand } = require("./economy");
-const { handleRoubarCommand, handleDueloCommand, handleButtonInteraction, handleTimeoutCommand, handleFiancaCommand, handleParrudoCommand, isPrisioneiro } = require("./duel");
+const { handleRoubarCommand, handleDueloCommand, handleButtonInteraction, handleTimeoutCommand, handleFiancaCommand, handleParrudoCommand, isPrisioneiro, handleBeijarMuroCommand } = require("./duel");
 const { handleAventuraCommand, handleRpgInteraction } = require("./rpg");
 const { handleBoostCommand, handleBoostInteraction } = require("./boosts");
+const { checkAndSendTip } = require("./tips");
 
 function createClient() {
   return new Client({
@@ -33,45 +34,65 @@ function createClient() {
   });
 }
 
-function buildHelpText() {
-  return [
-    "🤖 **Comandos do Nana** 🍌",
-    "ℹ️ `!help` - mostra esta lista.",
-    "✨ `!new` - mostra as últimas atualizações do bot.",
-    "💰 `!saldo` / `!nanacoins` - verifica quanto dinheiro virtual você tem.",
-    "🏆 `!rank` - mostra os mais ricos do servidor.",
-    "💰 `!doar <@user> <valor>` - transfere Nanacoins para outro jogador.",
-    "🛡️ `!parrudo <horas>h` - compra imunidade a roubos por X horas.",
-    "🚀 `!boost` - abre a loja clandestina para multiplicar ganhos ou melhorar roubo.",
-    "🚓 `!timeout` - verifica quanto tempo falta para sair da prisão.",
-    "💸 `!fianca` - paga 250 Nanacoins para sair da prisão.",
-    "⚔️ `!duelo <@user> <valor>` - trava uma batalha tática valendo moedas.",
-    "🎯 `!roubar <@user>` - tenta furtar Nanacoins de alguém (50% de chance).",
-    "🌌 `!aventura` (ou `!rpg`, `!av`) - RPG do multiverso e Show do Milhão.",
-    "🎮 `!forca` - inicia o jogo da Forca da IA.",
-    "💬 `!nana <texto>` - conversa com a IA no modo casual/persona.",
-    "🧠 `!question <pergunta>` - pergunta séria, resposta profissional.",
-    `  ⚙️ Provedor atual do !question: \`${config.QUESTION_PROVIDER === "gemini_cli" ? "Gemini CLI com fallback local" : "Ollama local"}\`.`,
-    "🖼️ `!img <prompt>` - gera imagem realista pelo Forge.",
-    "🌸 `!anime <prompt>` - gera imagem em estilo anime pelo Forge.",
-    "🔊 `!f <texto>` - fala no canal de voz onde você está.",
-    "🧹 `!clear [cmd] <num>` - apaga mensagens do bot ou comandos de usuários.",
-    "",
-    "🐒 *Também respondo quando me mencionam ou falam `nana` / `botbanana` como palavra separada.*"
-  ].join("\n");
+function buildHelpEmbed() {
+  return new EmbedBuilder()
+    .setColor('#FFD700')
+    .setTitle('🤖 Comandos do Nana 🍌')
+    .setDescription('Aqui está a lista de tudo que eu posso fazer por você no servidor!\nExplore os comandos por categoria abaixo.')
+    .addFields(
+      { name: '💰 Economia & Loja', value: [
+        '`!daily` / `!diario` - 🎁 Gire a roleta diária para ganhar prêmios e itens!',
+        '`!saldo` / `!nanacoins` - 💵 Verifica quanto dinheiro virtual você tem.',
+        '`!rank` - 🏆 Mostra os mais ricos do servidor.',
+        '`!doar <@user> <valor>` - 💸 Transfere Nanacoins para outro jogador.',
+        '`!loja` - 🚀 Abre a loja clandestina (Boosts, Bombas, Pé de Coelho, etc).'
+      ].join('\n') },
+      { name: '⚔️ Crime & Duelo', value: [
+        '`!roubar <@user>` - 🥷 Tenta furtar Nanacoins de alguém (50% de chance).',
+        '`!parrudo <horas>h` - 🛡️ Compra imunidade a roubos por X horas.',
+        '`!timeout` - 🚓 Verifica quanto tempo falta para sair da prisão.',
+        '`!fianca [@user]` - 💸 Paga 250 Nanacoins para sair ou libertar amigo da prisão.',
+        '`!duelo <@user> <valor>` - ⚔️ Batalha tática valendo moedas.',
+        '`!beijarmuro` - 💋 Beija o muro e testa sua sorte (pode dar bom ou muito ruim).'
+      ].join('\n') },
+      { name: '🎮 Games & RPG', value: [
+        '`!games` - 🎰 Abre o Fliperama do Nana! Jogue Forca, Aventura/Trivia ou Duelo com uma interface chamativa.'
+      ].join('\n') },
+      { name: '🧠 IA & Utilidades', value: [
+        '`!nana <texto>` - 💬 Conversa com a IA no modo casual/persona.',
+        '`!question <texto>` - 🧠 Pergunta séria, resposta profissional.',
+        '`!img <prompt>` - 🖼️ Gera imagem realista pelo Forge.',
+        '`!anime <prompt>` - 🌸 Gera imagem em estilo anime pelo Forge.',
+        '`!f <texto>` - 🔊 Fala no canal de voz onde você está.',
+        '`!clear [cmd] <num>` - 🧹 Apaga mensagens do bot ou comandos de usuários.'
+      ].join('\n') }
+    )
+    .setFooter({ text: 'Dica: Eu também respondo se você me mencionar ou me chamar pelo nome no chat livre!' });
 }
 
-function buildNewText() {
-  return [
-    "**Últimas Atualizações do Nana V3.2 (Otimizado e Turbinado):**",
-    "🚀 **Loja Clandestina (`!boost`):** Agora você pode comprar multiplicadores de 2x, 3x e 4x para Forca e Show do Milhão, além de aumentar sua chance de roubo!",
-    "🛡️ **Parrudo por Horas (`!parrudo`):** Chega de só 2 horinhas! Agora você pode comprar pacotes de `2h` (500), `5h` (1k) ou `10h` (5k) de proteção.",
-    "⚡ **Motor Refatorado:** Toda a economia do bot foi reescrita para salvar em background e não travar o servidor. Fim dos lags!",
-    "💸 **Fiança (`!fianca`):** A fiança baixou! Agora custa apenas 250 Nanacoins para subornar o delegado e sair da prisão.",
-    "🥷 **Busca Global (`!roubar`):** O comando de roubar agora localiza jogadores de outros servidores pelo *Display Name*.",
-    "🎁 **Eventos Aleatórios:** A cada 2 horas surge um baú no chat que dá 200 Nanacoins pro primeiro que pegar!",
-    "🌌 **Hub do Multiverso (`!rpg`, `!av`):** Motor de RPG gerado 100% por IA com IA Juíza e Show do Milhão com imagens geradas na hora."
-  ].join("\n");
+function buildNewEmbed() {
+  return new EmbedBuilder()
+    .setColor('#00FF00') // Verde neon chamativo
+    .setTitle('🌟 NOVIDADES DO NANA V4.0 🌟')
+    .setDescription('O bot acabou de receber uma **atualização massiva** com chefões, roleta diária e um inventário de itens sujos! Confira o que mudou:')
+    .addFields(
+      { name: '🐉 O Retorno do World Boss', value: 'A cada **12 horas**, um monstro épico gerado por IA invade o chat! Todos podem atacar juntos para dividir uma recompensa absurda de **10.000 Nanacoins**!' },
+      { name: '📅 Roleta Diária (`!daily`)', value: 'Você ganhou o direito de girar a roleta 1 vez por dia! Pode ganhar moedas, o grande Jackpot ou itens especiais.' },
+      { name: '🎒 Novos Itens da Loja (`!loja`)', value: [
+        '💨 **Bomba de Fumaça (GRÁTIS):** Resgate de graça a cada 12h! Se a polícia tentar te prender na 2ª falha de roubo, você foge ileso.',
+        '🐰 **Pé de Coelho:** Chega de azar! Garante vitória máxima e anula a polícia no seu próximo `!beijarmuro`.',
+        '🔧 **Pé de Cabra:** Roubos bem-sucedidos vão arrancar de 40% a 80% do dinheiro da vítima por 5 minutos.',
+        '🛡️ **Escudo de Espinhos:** Se alguém tentar te roubar e falhar, o ladrão espeta o dedo e te paga 10% do dinheiro dele como multa!'
+      ].join('\n') },
+      { name: '🎰 O NOVO FLIPERAMA (`!games`)', value: 'Esqueça os comandos velhos! Digite **`!games`** para abrir o novo cassino interativo. Agora a Forca suporta múltiplas rodadas automáticas e o Duelo é iniciado sem complicação!' },
+      { name: '✨ Ajustes Rápidos', value: [
+        '🎨 **Novo `!help`:** O painel de ajuda foi totalmente refeito e agora é um card organizado.',
+        '💸 **Fiança Amiga (`!fianca @usuario`):** Agora você pode pagar a fiança de um amigo que rodou na polícia (250 coins).',
+        '🛡️ **Parrudo Barato (`!parrudo`):** Nova opção rápida de `1h` de imunidade a roubos por apenas 250 moedas!'
+      ].join('\n') }
+    )
+    .setImage('https://media.tenor.com/XqT7hS_m4_kAAAAC/hype-train.gif') // Gif chamativo de hype
+    .setFooter({ text: 'A economia está pegando fogo! Divirta-se e cuidado com as costas!' });
 }
 
 async function sendChunkedReply(message, text) {
@@ -115,7 +136,7 @@ async function handleTextCommand(message) {
 
     return sendChunkedReply(message, resposta);
   } catch (err) {
-    console.error("🔥 Erro no comando de texto:", err);
+    console.log("🔥 Erro no comando de texto:", err.message);
     return message.reply("⚠️ Erro só no texto/LLM. Abre o Ollama com `ollama serve`.");
   }
 }
@@ -139,7 +160,7 @@ async function handleQuestionCommand(message) {
 
     return sendChunkedReply(message, resposta);
   } catch (err) {
-    console.error("🔥 Erro no comando !question:", err);
+    console.log("🔥 Erro no comando !question:", err.message);
     if (isPerguntaMapasPathOfExile(texto)) {
       console.log("🧭 [Question/Fixo] Usando resposta segura de mapas de Path of Exile após falha do provider.");
       return message.reply({
@@ -210,6 +231,7 @@ async function handleMessage(message) {
   cachearMensagem(message);
   maybeExtrairFofocas(message);
   checkAndSpawnEvent(message);
+  checkAndSendTip(message);
 
   if (isPrisioneiro(message.author.id) && (isCommand(message, ["!forca", "!roubar", "!duelo", "!aventura", "!rpg", "!av"]))) {
     return message.reply("🚓 Você está na prisão! Presidiários não podem jogar Forca, Aventura, Duelos ou Roubar.");
@@ -221,14 +243,14 @@ async function handleMessage(message) {
 
   if (isCommand(message, ["!help"])) {
     return message.reply({
-      content: buildHelpText(),
+      embeds: [buildHelpEmbed()],
       allowedMentions: { repliedUser: false, parse: [] }
     });
   }
 
   if (isCommand(message, ["!new"])) {
     return message.reply({
-      content: buildNewText(),
+      embeds: [buildNewEmbed()],
       allowedMentions: { repliedUser: false, parse: [] }
     });
   }
@@ -241,12 +263,13 @@ async function handleMessage(message) {
     return handleClearCommand(message, getCommandText(message, ["!clear"]));
   }
 
-  if (isCommand(message, ["!forca"])) {
-    return handleForcaCommand(message);
+  if (isCommand(message, ["!games"])) {
+    const { handleGamesCommand } = require("./games_menu");
+    return handleGamesCommand(message);
   }
 
-  if (isCommand(message, ["!aventura", "!rpg", "!av"])) {
-    return handleAventuraCommand(message);
+  if (isCommand(message, ["!forca", "!aventura", "!rpg", "!av", "!duelo"])) {
+    return message.reply("🎮 **ATUALIZAÇÃO:** Estes comandos antigos foram desativados! Digite **`!games`** para acessar todos os jogos de forma fácil no novo Fliperama!");
   }
 
   if (isCommand(message, ["!roubar"])) {
@@ -270,26 +293,57 @@ async function handleMessage(message) {
     return handleParrudoCommand(message, getCommandText(message, ["!parrudo"]));
   }
 
-  if (isCommand(message, ["!boost", "!boosts", "!loja"])) {
+  if (isCommand(message, ["!loja", "!boost", "!boosts"])) {
     return handleBoostCommand(message);
   }
 
-  if (isCommand(message, ["!duelo"])) {
-    return handleDueloCommand(message, getCommandText(message, ["!duelo"]));
+  if (isCommand(message, ["!beijarmuro", "!bejarmuro"])) {
+    return handleBeijarMuroCommand(message);
+  }
+
+  if (isCommand(message, ["!daily", "!diario"])) {
+    const { handleDailyCommand } = require("./inventory");
+    return handleDailyCommand(message);
+  }
+
+  if (isCommand(message, ["!spawn_boss"])) {
+    const { spawnWorldBoss } = require("./boss");
+    spawnWorldBoss(message.channel);
+    return;
+  }
+
+  if (isCommand(message, ["!duelo_old"])) {
+    return handleDueloCommand(message, getCommandText(message, ["!duelo_old"]));
   }
 
   if (isCommand(message, ["!saldo", "!nanacoins", "!atm", "!dinheiro"])) {
     const coins = getCoins(message.author.id);
-    return message.reply(`💰 Você tem **${coins} Nanacoins 🪙** na sua conta! Ganhe mais jogando \`!rpg\`, \`!forca\` ou tente a sorte com \`!roubar\`.`);
+    const topPlayers = getTopPlayers(100);
+    const myRank = topPlayers.findIndex(p => p.id === message.author.id) + 1;
+    const rankStr = myRank > 0 ? `#${myRank}` : 'Não rankeado';
+    const { formatCoins } = require("./economy");
+
+    const embed = new EmbedBuilder()
+      .setColor('#000000') // Estilo Cartão Black
+      .setTitle('💳 BANCO NANACOIN')
+      .setDescription(`Extrato bancário de **${message.author.username}**`)
+      .addFields(
+        { name: '💵 Saldo Disponível', value: `\`🪙 ${formatCoins(coins)} Nanacoins\``, inline: true },
+        { name: '🏆 Posição no Rank', value: `\`${rankStr}\``, inline: true }
+      )
+      .setFooter({ text: 'Dica: Use !loja para gastar ou !roubar para tentar a sorte.' });
+
+    return message.reply({ embeds: [embed] });
   }
 
   if (isCommand(message, ["!rank", "!top"])) {
-    const topPlayers = getTopPlayers(15);
+    const topPlayers = getTopPlayers(10);
     if (topPlayers.length === 0) {
       return message.reply("Ninguém tem dinheiro ainda. Joguem `!forca`!");
     }
+    const { formatCoins } = require("./economy");
     
-    let rankText = "🏆 **RANKING GLOBAL - TOP 15 MAIS RICOS** 🏆\n\n";
+    let rankText = "";
     for (let i = 0; i < topPlayers.length; i++) {
       const p = topPlayers[i];
       let username = "Desconhecido";
@@ -307,15 +361,16 @@ async function handleMessage(message) {
       else if (i === 1) formattedName = `**${username}**`;
       else if (i === 2) formattedName = `*${username}*`;
       
-      if (i < 3) {
-        rankText += `${medal} **#${i + 1}** ${formattedName} — **${p.balance}** Nanacoins 🪙\n`;
-      } else {
-        rankText += `${medal} #${i + 1} ${formattedName} — ${p.balance} Nanacoins 🪙\n`;
-      }
+      rankText += `${medal} **#${i + 1}** ${formattedName} — \`${formatCoins(p.balance)} 🪙\`\n`;
     }
-    
-    rankText += "\n💸 Suba no rank vencendo \`!duelo\`, apostando no \`!rpg\` ou limpando os bolsos com \`!roubar\`!";
-    return message.reply(rankText);
+
+    const embed = new EmbedBuilder()
+      .setColor('#FFD700')
+      .setTitle('🏆 RANKING GLOBAL - TOP 10 MAIS RICOS')
+      .setDescription(rankText)
+      .setFooter({ text: 'A corrida pelo dinheiro virtual está insana!' });
+
+    return message.reply({ embeds: [embed] });
   }
 
   if (isCommand(message, ["!nana"])) {
@@ -354,10 +409,16 @@ function start() {
       if (await handleForcaThemeInteraction(interaction)) return;
       
       if (interaction.isStringSelectMenu()) {
-        if (interaction.customId === 'boost_select') {
+        if (interaction.customId.startsWith('boost_select_')) {
           return handleBoostInteraction(interaction);
         }
       }
+
+      const { handleBossInteraction } = require("./boss");
+      if (await handleBossInteraction(interaction)) return;
+
+      const { handleGamesInteraction } = require("./games_menu");
+      if (await handleGamesInteraction(interaction)) return;
 
       // Existing handlers at the end
       handleButtonInteraction(interaction).catch((err) => {

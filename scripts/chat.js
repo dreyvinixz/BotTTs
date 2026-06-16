@@ -252,7 +252,7 @@ async function maybeResponderEspontaneo(message) {
     await responderComOllama(message, decisao.motivo);
     console.log(`✅ Resposta enviada para @${message.author.username} com sucesso.`);
   } catch (err) {
-    console.error("🔥 Erro ao responder com Ollama:", err);
+    console.log("🔥 Erro ao responder com Ollama (espontâneo):", err.message);
 
     if (message.mentions.has(message.client.user)) {
       await message.reply({

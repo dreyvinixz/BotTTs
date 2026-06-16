@@ -1,7 +1,7 @@
 const { AttachmentBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, MessageFlags } = require("discord.js");
 const config = require("./config");
 const { assertForgeReady } = require("./services");
-const { addCoins, removeCoins } = require("./economy");
+const { getCoins, addCoins, removeCoins } = require("./economy");
 const { getGameMultiplier } = require("./boosts");
 
 const forcaGames = new Map();
@@ -655,9 +655,9 @@ function getForcaEmbedText(gameState) {
   const masked = maskWord(gameState.word, gameState.guessed);
   const chutes = Array.from(gameState.guessed).join(", ") || "Nenhum";
   const coracoes = "❤️ ".repeat(gameState.lives) + "🖤 ".repeat(6 - gameState.lives);
+  const rodadaInfo = gameState.maxRounds > 1 ? ` (Rodada ${gameState.currentRound}/${gameState.maxRounds})` : "";
   const temaInfo = TEMAS[gameState.tema] ? `${TEMAS[gameState.tema].emoji} ${TEMAS[gameState.tema].label}` : "Aleatório";
-
-  return `🎮 **JOGO DA FORCA DA IA!**
+  return `🎮 **JOGO DA FORCA DA IA!**${rodadaInfo}
 Tema: **${temaInfo}**
 Chute uma letra enviando-a sozinha no chat.
 
@@ -690,64 +690,67 @@ function resetForcaTimer(channelId, channel) {
 // Guardar temporariamente quem está escolhendo tema
 const pendingThemeSelection = new Map();
 
-async function handleForcaCommand(message) {
-  const channelId = message.channel.id;
+async function promptForcaRounds(interaction) {
+  const channelId = interaction.channelId;
   if (forcaGames.has(channelId)) {
-    return message.reply("❌ Já tem um jogo da forca rolando neste canal! Adivinhe a palavra ou espere acabar.");
+    return interaction.reply({ content: "❌ Já tem um jogo da forca rolando neste canal! Adivinhe a palavra ou espere acabar.", flags: MessageFlags.Ephemeral });
   }
 
-  // Se já tem um menu de seleção pendente, ignora
-  if (pendingThemeSelection.has(channelId)) {
-    return message.reply("❌ Já tem uma escolha de tema pendente neste canal! Escolha um tema ou espere expirar.");
-  }
-
-  // Criar botões de temas (máx 5 por row, temos 10 temas = 2 rows)
-  const temaKeys = Object.keys(TEMAS);
-  const row1 = new ActionRowBuilder().addComponents(
-    ...temaKeys.slice(0, 5).map(key =>
-      new ButtonBuilder()
-        .setCustomId(`forca_tema_${key}`)
-        .setLabel(`${TEMAS[key].emoji} ${TEMAS[key].label}`)
-        .setStyle(ButtonStyle.Primary)
-    )
-  );
-  const row2 = new ActionRowBuilder().addComponents(
-    ...temaKeys.slice(5, 10).map(key =>
-      new ButtonBuilder()
-        .setCustomId(`forca_tema_${key}`)
-        .setLabel(`${TEMAS[key].emoji} ${TEMAS[key].label}`)
-        .setStyle(ButtonStyle.Primary)
-    )
-  );
-  const row3 = new ActionRowBuilder().addComponents(
-    new ButtonBuilder()
-      .setCustomId("forca_tema_aleatorio")
-      .setLabel("🎲 Aleatório (Surpresa!)")
-      .setStyle(ButtonStyle.Success)
+  const row = new ActionRowBuilder().addComponents(
+    new ButtonBuilder().setCustomId('forca_r_1').setLabel('1 Rodada').setStyle(ButtonStyle.Primary),
+    new ButtonBuilder().setCustomId('forca_r_3').setLabel('3 Rodadas').setStyle(ButtonStyle.Primary),
+    new ButtonBuilder().setCustomId('forca_r_5').setLabel('5 Rodadas').setStyle(ButtonStyle.Danger)
   );
 
-  const menuMsg = await message.reply({
-    content: "🎮 **JOGO DA FORCA** — Escolha o tema!\nSelecione uma categoria abaixo para começar:",
-    components: [row1, row2, row3]
+  await interaction.reply({
+    content: "🎮 **JOGO DA FORCA**\nQuantas rodadas seguidas você quer jogar?",
+    components: [row]
   });
-
-  pendingThemeSelection.set(channelId, {
-    messageId: menuMsg.id,
-    userId: message.author.id,
-    originalMessage: message
-  });
-
-  // Expira em 60 segundos se ninguém escolher
-  setTimeout(() => {
-    if (pendingThemeSelection.has(channelId)) {
-      pendingThemeSelection.delete(channelId);
-      menuMsg.edit({ content: "⏰ Tempo de seleção expirou! Use `!forca` de novo.", components: [] }).catch(() => null);
-    }
-  }, 60000);
 }
 
 async function handleForcaThemeInteraction(interaction) {
   if (!interaction.isButton()) return false;
+
+  if (interaction.customId.startsWith("forca_r_")) {
+    const rounds = parseInt(interaction.customId.replace("forca_r_", ""), 10);
+    const channelId = interaction.channelId;
+
+    const temaKeys = Object.keys(TEMAS);
+    const row1 = new ActionRowBuilder().addComponents(
+      ...temaKeys.slice(0, 5).map(key =>
+        new ButtonBuilder()
+          .setCustomId(`forca_tema_${key}`)
+          .setLabel(`${TEMAS[key].emoji} ${TEMAS[key].label}`)
+          .setStyle(ButtonStyle.Primary)
+      )
+    );
+    const row2 = new ActionRowBuilder().addComponents(
+      ...temaKeys.slice(5, 10).map(key =>
+        new ButtonBuilder()
+          .setCustomId(`forca_tema_${key}`)
+          .setLabel(`${TEMAS[key].emoji} ${TEMAS[key].label}`)
+          .setStyle(ButtonStyle.Primary)
+      )
+    );
+    const row3 = new ActionRowBuilder().addComponents(
+      new ButtonBuilder()
+        .setCustomId("forca_tema_aleatorio")
+        .setLabel("🎲 Aleatório (Surpresa!)")
+        .setStyle(ButtonStyle.Success)
+    );
+
+    pendingThemeSelection.set(channelId, {
+      userId: interaction.user.id,
+      rounds: rounds
+    });
+
+    await interaction.update({
+      content: `🎮 **JOGO DA FORCA (${rounds} Rodadas)** — Escolha o tema!\nSelecione uma categoria abaixo para começar:`,
+      components: [row1, row2, row3]
+    });
+    return true;
+  }
+
   if (!interaction.customId.startsWith("forca_tema_")) return false;
 
   const channelId = interaction.channel.id;
@@ -774,7 +777,19 @@ async function handleForcaThemeInteraction(interaction) {
     return true;
   }
 
-  // Iniciar o jogo com o tema escolhido
+  // Atualiza o menu para mostrar que o tema foi selecionado
+  await interaction.update({
+    content: `🎮 Tema escolhido: **${TEMAS[temaEscolhido].emoji} ${TEMAS[temaEscolhido].label}**! Gerando dica visual...`,
+    components: []
+  });
+
+  const maxRounds = pending ? pending.rounds : 1;
+  startForcaRound(channelId, interaction.channel, temaEscolhido, maxRounds, 1);
+
+  return true;
+}
+
+async function startForcaRound(channelId, channel, temaEscolhido, maxRounds, currentRound) {
   const word = getPalavraAleatoria(channelId, temaEscolhido);
   const gameState = {
     word: word,
@@ -782,17 +797,13 @@ async function handleForcaThemeInteraction(interaction) {
     guessed: new Set(),
     lives: 6,
     mainMessage: null,
-    timerId: null
+    timerId: null,
+    maxRounds: maxRounds,
+    currentRound: currentRound
   };
 
   forcaGames.set(channelId, gameState);
-  resetForcaTimer(channelId, interaction.channel);
-
-  // Atualiza o menu para mostrar que o tema foi selecionado
-  await interaction.update({
-    content: `🎮 Tema escolhido: **${TEMAS[temaEscolhido].emoji} ${TEMAS[temaEscolhido].label}**! Gerando dica visual...`,
-    components: []
-  });
+  resetForcaTimer(channelId, channel);
 
   // Gerar imagem e começar o jogo
   const promptDesc = getImagePrompt(word, temaEscolhido);
@@ -829,7 +840,7 @@ async function handleForcaThemeInteraction(interaction) {
     const buffer = Buffer.from(imageBase64, "base64");
     const attachment = new AttachmentBuilder(buffer, { name: "dica_forca.png" });
 
-    const mainMsg = await interaction.channel.send({
+    const mainMsg = await channel.send({
       content: getForcaEmbedText(gameState),
       files: [attachment]
     });
@@ -837,11 +848,9 @@ async function handleForcaThemeInteraction(interaction) {
 
   } catch (err) {
     console.error("Erro no forge forca:", err);
-    const mainMsg = await interaction.channel.send(`⚠️ Não consegui gerar a imagem da dica (${err.message}), mas o jogo continua!\n\n${getForcaEmbedText(gameState)}`);
+    const mainMsg = await channel.send(`⚠️ Não consegui gerar a imagem da dica (${err.message}), mas o jogo continua!\n\n${getForcaEmbedText(gameState)}`);
     gameState.mainMessage = mainMsg;
   }
-
-  return true;
 }
 
 // ========== LÓGICA DE CHUTES ==========
@@ -886,11 +895,21 @@ function checkForcaGuess(message) {
       addCoins(message.author.id, reward);
       const multMsg = mult > 1 ? ` *(x${mult} Boost!)*` : "";
       gameState.mainMessage.edit(`🎉 **VITÓRIA!** O jogador ${message.author.username} adivinhou a última letra e ganhou **${reward} Nanacoins 🪙**${multMsg}!\nA palavra era **${gameState.word}**!\n\n${getForcaEmbedText(gameState)}`).catch(() => null);
+
+      if (gameState.currentRound < gameState.maxRounds) {
+        message.channel.send(`👉 Preparando a Rodada ${gameState.currentRound + 1}...`);
+        setTimeout(() => startForcaRound(channelId, message.channel, gameState.tema, gameState.maxRounds, gameState.currentRound + 1), 3000);
+      }
       return true;
     } else if (gameState.lives <= 0) {
       if (gameState.timerId) clearTimeout(gameState.timerId);
       forcaGames.delete(channelId);
       gameState.mainMessage.edit(`💀 **GAME OVER!** Vocês foram enforcados!\nA palavra era **${gameState.word}**!\n\n${getForcaEmbedText(gameState)}`).catch(() => null);
+
+      if (gameState.currentRound < gameState.maxRounds) {
+        message.channel.send(`👉 Preparando a Rodada ${gameState.currentRound + 1}...`);
+        setTimeout(() => startForcaRound(channelId, message.channel, gameState.tema, gameState.maxRounds, gameState.currentRound + 1), 3000);
+      }
       return true;
     } else {
       gameState.mainMessage.edit(getForcaEmbedText(gameState)).catch(() => null);
@@ -912,14 +931,25 @@ function checkForcaGuess(message) {
       addCoins(message.author.id, reward); // Recompensa Épica
       const multMsg = mult > 1 ? ` *(x${mult} Boost!)*` : "";
       gameState.mainMessage.edit(`🎉 **VITÓRIA ÉPICA!** O jogador ${message.author.username} adivinhou a palavra inteira de uma vez e ganhou **${reward} Nanacoins 🪙**${multMsg}!\nA palavra era **${gameState.word}**!\n\n${getForcaEmbedText(gameState)}`).catch(() => null);
+
+      if (gameState.currentRound < gameState.maxRounds) {
+        message.channel.send(`👉 Preparando a Rodada ${gameState.currentRound + 1}...`);
+        setTimeout(() => startForcaRound(channelId, message.channel, gameState.tema, gameState.maxRounds, gameState.currentRound + 1), 3000);
+      }
       return true;
     } else {
       gameState.lives--;
       if (gameState.lives <= 0) {
         if (gameState.timerId) clearTimeout(gameState.timerId);
         forcaGames.delete(channelId);
-        removeCoins(message.author.id, 30);
-        gameState.mainMessage.edit(`💀 **GAME OVER!** O jogador ${message.author.username} chutou a palavra errada, matou o boneco e perdeu **30 Nanacoins 🪙**!\nA palavra era **${gameState.word}**!\n\n${getForcaEmbedText(gameState)}`).catch(() => null);
+        const penalty = Math.min(getCoins(message.author.id), 200);
+        if (penalty > 0) removeCoins(message.author.id, penalty);
+        gameState.mainMessage.edit(`💀 **GAME OVER!** O jogador ${message.author.username} chutou a palavra errada, matou o boneco e perdeu **${penalty} Nanacoins 🪙**!\nA palavra era **${gameState.word}**!\n\n${getForcaEmbedText(gameState)}`).catch(() => null);
+
+        if (gameState.currentRound < gameState.maxRounds) {
+          message.channel.send(`👉 Preparando a Rodada ${gameState.currentRound + 1}...`);
+          setTimeout(() => startForcaRound(channelId, message.channel, gameState.tema, gameState.maxRounds, gameState.currentRound + 1), 3000);
+        }
         return true;
       } else {
         gameState.mainMessage.edit(`❌ Palavra errada! Perderam 1 vida.\n\n${getForcaEmbedText(gameState)}`).catch(() => null);
@@ -934,12 +964,15 @@ function checkForcaGuess(message) {
 // ========== EVENTOS ALEATÓRIOS ==========
 
 let lastEventTime = Date.now();
+let lastBossTime = Date.now();
 let activeEventMsgId = null;
 
 async function checkAndSpawnEvent(message) {
-  // A cada 2 horas
-  if (Date.now() - lastEventTime > 2 * 60 * 60 * 1000) {
-    lastEventTime = Date.now();
+  const now = Date.now();
+
+  // A cada 1 hora (baú)
+  if (now - lastEventTime > 1 * 60 * 60 * 1000) {
+    lastEventTime = now;
 
     const row = new ActionRowBuilder().addComponents(
       new ButtonBuilder()
@@ -962,6 +995,13 @@ async function checkAndSpawnEvent(message) {
         msg.edit({ content: "⏰ **EVENTO EXPIRADO!** Ninguém pegou o baú a tempo...", components: [] }).catch(() => null);
       }
     }, 10 * 60 * 1000);
+  }
+
+  // A cada 12 horas (World Boss)
+  if (now - lastBossTime > 12 * 60 * 60 * 1000) {
+    lastBossTime = now;
+    const { spawnWorldBoss } = require("./boss");
+    spawnWorldBoss(message.channel);
   }
 }
 
@@ -986,7 +1026,7 @@ async function handleEventInteraction(interaction) {
 }
 
 module.exports = {
-  handleForcaCommand,
+  promptForcaRounds,
   handleForcaThemeInteraction,
   checkForcaGuess,
   checkAndSpawnEvent,
