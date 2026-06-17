@@ -87,6 +87,9 @@ npm start
 | `!saldo` | Check your Nanacoins balance. |
 | `!rank` | View the global richest players. |
 | `!roubar @user` | Try to steal Nanacoins (risks going to prison). |
+| `!inventario` / `!inv` | View items, weapons, and equipped weapon. |
+| `!equipar <weaponId>` | Equip one weapon from your inventory. |
+| `!bolsa` | Open the centralized market UI for buying, selling, trade, and history. |
 | `!games` | Open the game hub for Hangman, Multiverse/Trivia, and Duels. |
 | `!fliperama` | Open lootboxes and arcade rewards. |
 | `!nana <text>` | Casual/persona LLM response. |

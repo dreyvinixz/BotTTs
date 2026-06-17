@@ -3,7 +3,8 @@ const config = require("../core/config");
 const { addCoins } = require("./economy");
 const { createDebouncedJsonWriter } = require("../core/storage");
 
-// Estrutura do inventário: { [userId]: { [itemId]: quantidade, lastDaily: timestamp, lastSmokeBomb: timestamp } }
+// Estrutura do inventário:
+// { [userId]: { items: { [itemId]: quantidade }, weapons: [], equippedWeaponId, lastDaily, lastSmokeBomb } }
 let db = {};
 const INVENTORY_PATH = config.paths.inventory;
 
@@ -12,6 +13,9 @@ function carregarInventario() {
     if (fs.existsSync(INVENTORY_PATH)) {
       const data = fs.readFileSync(INVENTORY_PATH, "utf-8");
       db = JSON.parse(data);
+      for (const userId of Object.keys(db)) {
+        ensureUser(userId);
+      }
     }
   } catch (err) {
     console.error("Erro ao carregar inventário:", err);
@@ -24,11 +28,28 @@ function ensureUser(userId) {
   if (!db[userId]) {
     db[userId] = {
       items: {},
+      weapons: [],
+      equippedWeaponId: null,
       lastDaily: 0,
       lastSmokeBomb: 0
     };
   }
+
+  const current = db[userId];
+  if (!current.items) {
+    const legacyItems = {};
+    for (const [key, value] of Object.entries(current)) {
+      if (typeof value === "number" && !["lastDaily", "lastSmokeBomb"].includes(key)) {
+        legacyItems[key] = value;
+      }
+    }
+    current.items = legacyItems;
+  }
   if (!db[userId].items) db[userId].items = {};
+  if (!Array.isArray(db[userId].weapons)) db[userId].weapons = [];
+  if (!("equippedWeaponId" in db[userId])) db[userId].equippedWeaponId = null;
+  if (!("lastDaily" in db[userId])) db[userId].lastDaily = 0;
+  if (!("lastSmokeBomb" in db[userId])) db[userId].lastSmokeBomb = 0;
 }
 
 function addItem(userId, itemId, amount = 1) {
@@ -56,6 +77,114 @@ function removeItem(userId, itemId, amount = 1) {
 function hasItem(userId, itemId) {
   ensureUser(userId);
   return db[userId].items[itemId] > 0;
+}
+
+function getUserInventory(userId) {
+  ensureUser(userId);
+  return {
+    items: { ...db[userId].items },
+    weapons: db[userId].weapons.map((weapon) => ({ ...weapon })),
+    equippedWeaponId: db[userId].equippedWeaponId,
+    lastDaily: db[userId].lastDaily,
+    lastSmokeBomb: db[userId].lastSmokeBomb
+  };
+}
+
+function addWeaponInstance(userId, weaponInstance) {
+  ensureUser(userId);
+  db[userId].weapons.push({ ...weaponInstance });
+  if (!db[userId].equippedWeaponId) {
+    db[userId].equippedWeaponId = weaponInstance.instanceId;
+  }
+  salvarInventario();
+  return weaponInstance;
+}
+
+function updateWeaponInstance(userId, instanceId, updater) {
+  ensureUser(userId);
+  const index = db[userId].weapons.findIndex((weapon) => weapon.instanceId === instanceId);
+  if (index < 0) return null;
+  const next = updater({ ...db[userId].weapons[index] });
+  if (!next) {
+    db[userId].weapons.splice(index, 1);
+    if (db[userId].equippedWeaponId === instanceId) {
+      db[userId].equippedWeaponId = db[userId].weapons[0]?.instanceId || null;
+    }
+  } else {
+    db[userId].weapons[index] = next;
+  }
+  salvarInventario();
+  return next;
+}
+
+function removeWeaponInstance(userId, instanceId) {
+  return updateWeaponInstance(userId, instanceId, () => null) === null;
+}
+
+function setEquippedWeapon(userId, instanceId) {
+  ensureUser(userId);
+  if (instanceId !== null && !db[userId].weapons.some((weapon) => weapon.instanceId === instanceId && !weapon.lockedUntil)) {
+    return false;
+  }
+  db[userId].equippedWeaponId = instanceId;
+  salvarInventario();
+  return true;
+}
+
+function lockInventoryEntry(userId, entry) {
+  ensureUser(userId);
+  if (entry.kind === "item") {
+    if (!hasItem(userId, entry.itemId)) return false;
+    removeItem(userId, entry.itemId, entry.amount || 1);
+    return true;
+  }
+  if (entry.kind === "weapon") {
+    const weapon = db[userId].weapons.find((item) => item.instanceId === entry.instanceId && !item.lockedUntil);
+    if (!weapon) return false;
+    weapon.lockedUntil = entry.lockedUntil || Date.now() + config.static.app.market.orderExpireMs;
+    if (db[userId].equippedWeaponId === entry.instanceId) db[userId].equippedWeaponId = null;
+    salvarInventario();
+    return true;
+  }
+  return false;
+}
+
+function unlockInventoryEntry(userId, entry) {
+  ensureUser(userId);
+  if (entry.kind === "item") {
+    addItem(userId, entry.itemId, entry.amount || 1);
+    return true;
+  }
+  if (entry.kind === "weapon") {
+    return !!updateWeaponInstance(userId, entry.instanceId, (weapon) => {
+      delete weapon.lockedUntil;
+      return weapon;
+    });
+  }
+  return false;
+}
+
+function transferLockedEntry(fromUserId, toUserId, entry) {
+  ensureUser(fromUserId);
+  ensureUser(toUserId);
+  if (entry.kind === "item") {
+    addItem(toUserId, entry.itemId, entry.amount || 1);
+    return true;
+  }
+  if (entry.kind === "weapon") {
+    const index = db[fromUserId].weapons.findIndex((weapon) => weapon.instanceId === entry.instanceId);
+    if (index < 0) return false;
+    const [weapon] = db[fromUserId].weapons.splice(index, 1);
+    delete weapon.lockedUntil;
+    db[toUserId].weapons.push(weapon);
+    if (db[fromUserId].equippedWeaponId === entry.instanceId) {
+      db[fromUserId].equippedWeaponId = db[fromUserId].weapons[0]?.instanceId || null;
+    }
+    if (!db[toUserId].equippedWeaponId) db[toUserId].equippedWeaponId = weapon.instanceId;
+    salvarInventario();
+    return true;
+  }
+  return false;
 }
 
 function canClaimSmokeBomb(userId) {
@@ -144,7 +273,21 @@ module.exports = {
   addItem,
   removeItem,
   hasItem,
+  getUserInventory,
+  addWeaponInstance,
+  updateWeaponInstance,
+  removeWeaponInstance,
+  setEquippedWeapon,
+  lockInventoryEntry,
+  unlockInventoryEntry,
+  transferLockedEntry,
   canClaimSmokeBomb,
   updateSmokeBombTimer,
-  handleDailyCommand
+  handleDailyCommand,
+  __setDbForTests(nextDb) {
+    db = JSON.parse(JSON.stringify(nextDb));
+  },
+  __getDbForTests() {
+    return JSON.parse(JSON.stringify(db));
+  }
 };

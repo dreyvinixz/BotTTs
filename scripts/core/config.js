@@ -45,6 +45,7 @@ ensureDir(STATIC_GAMES_DIR);
 const staticData = {
   app: readJsonFile(path.join(STATIC_CONFIG_DIR, "app.json"), {}),
   shop: readJsonFile(path.join(STATIC_CONFIG_DIR, "shop.json"), { boosts: {}, menuOrder: [] }),
+  weapons: readJsonFile(path.join(STATIC_CONFIG_DIR, "weapons.json"), { rarities: {}, classes: {}, weapons: {} }),
   games: {
     forca: readJsonFile(path.join(STATIC_GAMES_DIR, "forca.json"), { themes: {}, promptHints: {}, themeContext: {} }),
     trivia: readJsonFile(path.join(STATIC_GAMES_DIR, "trivia.json"), { themes: {}, difficulties: {}, questions: {} }),
@@ -119,7 +120,8 @@ config.paths = {
   fofocas: FOFOCAS_PATH,
   economia: ECONOMIA_PATH,
   timers: TIMERS_PATH,
-  inventory: path.resolve(DATA_DIR, "inventory.json")
+  inventory: path.resolve(DATA_DIR, "inventory.json"),
+  market: path.resolve(DATA_DIR, "market.json")
 };
 
 config.env = {

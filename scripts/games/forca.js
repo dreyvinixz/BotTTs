@@ -407,6 +407,7 @@ const EVENT_CHANNELS = config.static.app.events.channelIds;
 
 let lastEventTime = Date.now();
 let lastBossTime = Date.now(); // Spawna naturalmente em 12h
+let lastMiniBossTime = Date.now(); // Spawna naturalmente em 6h
 let activeEventMsgIds = new Set();
 
 function resetBossTimer() {
@@ -469,6 +470,21 @@ async function checkAndSpawnEvent(message) {
     if (bossChannels.length > 0) {
       const { spawnWorldBoss } = require("./boss");
       spawnWorldBoss(bossChannels);
+    }
+  }
+
+  if (now - lastMiniBossTime > config.static.app.events.miniBossIntervalMs) {
+    lastMiniBossTime = now;
+
+    const bossChannels = [];
+    for (const channelId of EVENT_CHANNELS) {
+      const bossChannel = message.client.channels.cache.get(channelId);
+      if (bossChannel) bossChannels.push(bossChannel);
+    }
+
+    if (bossChannels.length > 0) {
+      const { spawnMiniBoss } = require("./boss");
+      spawnMiniBoss(bossChannels);
     }
   }
 }

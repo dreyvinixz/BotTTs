@@ -40,7 +40,13 @@
           "text": "um **Pé de Cabra 🔧** (5 minutos)!"
         },
         {
-          "weight": 30,
+          "weight": 8,
+          "type": "weaponByRarity",
+          "rarity": "comum",
+          "text": "uma **arma comum ⚔️**!"
+        },
+        {
+          "weight": 25,
           "type": "coinsRange",
           "min": 100,
           "max": 1000,
@@ -98,7 +104,13 @@
           "text": "um **Game Boost 3x 🕹️** (40 minutos)!"
         },
         {
-          "weight": 25,
+          "weight": 8,
+          "type": "weaponByRarity",
+          "rarity": "raro",
+          "text": "uma **arma rara 🟣**!"
+        },
+        {
+          "weight": 20,
           "type": "coinsRange",
           "min": 1000,
           "max": 4000,
@@ -150,7 +162,19 @@
           "text": "um **Ácido Corrosivo 🧪**!"
         },
         {
-          "weight": 30,
+          "weight": 6,
+          "type": "weaponByRarity",
+          "rarity": "epico",
+          "text": "uma **arma épica ✨**!"
+        },
+        {
+          "weight": 2,
+          "type": "weaponByRarity",
+          "rarity": "lendario",
+          "text": "uma **arma lendária 🟡**!"
+        },
+        {
+          "weight": 25,
           "type": "coinsRange",
           "min": 5000,
           "max": 10000,

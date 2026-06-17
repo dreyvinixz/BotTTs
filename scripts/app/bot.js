@@ -21,6 +21,8 @@ const { getCoins, getTopPlayers, handleDoarCommand } = require("../economy/econo
 const { handleRoubarCommand, handleButtonInteraction, handleTimeoutCommand, handleFiancaCommand, handleParrudoCommand, isPrisioneiro, handleBeijarMuroCommand } = require("../games/duel");
 const { handleRpgInteraction } = require("../games/rpg");
 const { handleBoostCommand, handleBoostInteraction } = require("../economy/boosts");
+const { handleMarketCommand, handleMarketInteraction } = require("../economy/market");
+const { handleInventoryCommand, handleEquipWeaponCommand } = require("../economy/weapons");
 const { checkAndSendTip } = require("../features/tips");
 const { handleAdminCommand } = require("../admin/admin");
 
@@ -46,7 +48,10 @@ function buildHelpEmbed() {
         '`!saldo` / `!nanacoins` - 💵 Verifica quanto dinheiro virtual você tem.',
         '`!rank` - 🏆 Mostra os mais ricos do servidor.',
         '`!doar <@user> <valor>` - 💸 Transfere Nanacoins para outro jogador.',
-        '`!loja` - 🚀 Abre a loja clandestina (Boosts, Bombas, Pé de Coelho, etc).'
+        '`!loja` - 🏪 Abre loja de boosts, itens e armas.',
+        '`!bolsa` - 📈 Compra, vende e negocia itens/armas pela UI.',
+        '`!inventario` - 🎒 Mostra seus itens e armas.',
+        '`!equipar <id>` - ⚔️ Equipa uma arma.'
       ].join('\n') },
       { name: '⚔️ Crime & Duelo', value: [
         '`!roubar <@user>` - 🥷 Tenta furtar Nanacoins de alguém (50% de chance).',
@@ -274,9 +279,13 @@ async function handleMessage(message) {
     return handleRoubarCommand(message, getCommandText(message, ["!roubar"]));
   }
 
-  if (isCommand(message, ["!doar", "!trade"])) {
-    const text = getCommandText(message, ["!doar", "!trade"]);
+  if (isCommand(message, ["!doar"])) {
+    const text = getCommandText(message, ["!doar"]);
     return handleDoarCommand(message, text);
+  }
+
+  if (isCommand(message, ["!trade"])) {
+    return message.reply("Use `!bolsa` para negociar itens e armas.");
   }
 
   if (isCommand(message, ["!timeout"])) {
@@ -293,6 +302,18 @@ async function handleMessage(message) {
 
   if (isCommand(message, ["!loja", "!boost", "!boosts"])) {
     return handleBoostCommand(message);
+  }
+
+  if (isCommand(message, ["!bolsa"])) {
+    return handleMarketCommand(message);
+  }
+
+  if (isCommand(message, ["!inventario", "!inv"])) {
+    return handleInventoryCommand(message);
+  }
+
+  if (isCommand(message, ["!equipar"])) {
+    return handleEquipWeaponCommand(message, getCommandText(message, ["!equipar"]));
   }
 
   if (isCommand(message, ["!beijarmuro", "!bejarmuro"])) {
@@ -403,10 +424,15 @@ function start() {
       if (await handleEventInteraction(interaction)) return;
       if (await handleForcaThemeInteraction(interaction)) return;
       
-      if (interaction.isStringSelectMenu()) {
-        if (interaction.customId.startsWith('boost_select_')) {
-          return handleBoostInteraction(interaction);
-        }
+      if (await handleMarketInteraction(interaction)) return;
+
+      if (
+        interaction.customId?.startsWith('boost_select_')
+        || interaction.customId?.startsWith('shop_cat_')
+        || interaction.customId?.startsWith('weapon_select_')
+      ) {
+        await handleBoostInteraction(interaction);
+        return;
       }
 
       const { handleBossInteraction } = require("../games/boss");

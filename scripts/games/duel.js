@@ -9,6 +9,13 @@ const { resolveUserFromMessage, resolveUserFromInteraction } = require("../core/
 const { isSuperAdmin } = require("../admin/admin");
 const { resolveDuel, parsePositiveAmount, computeStealChance, rollStealPercent, selectParrudoOption } = require("./duelRules");
 const { choice } = require("../core/random");
+const { computeThornPenalty, resolveParrudoStealGate } = require("./stealRules");
+const {
+  getEquippedWeapon,
+  consumeWeaponDurability,
+  computeDuelWeaponModifier,
+  formatWeaponLabel
+} = require("../economy/weapons");
 
 const prisonMap = new Map();
 const parrudoMap = new Map();
@@ -128,14 +135,43 @@ async function handleRoubarCommand(message, text) {
 
   if (isParrudo(targetUser.id)) {
     const { hasItem, removeItem } = require("../economy/inventory");
+    const { hasEscudoEspinhos } = require("../economy/boosts");
+    const weapon = getEquippedWeapon(userId);
+    const weaponModifier = computeDuelWeaponModifier(weapon);
+    const acidBreaks = isSuperAdmin(userId) || (Math.random() < config.static.app.duel.acidBreakChance);
+    const gate = resolveParrudoStealGate({
+      targetIsParrudo: true,
+      targetHasThorns: hasEscudoEspinhos(targetUser.id),
+      thiefHasAcid: hasItem(userId, 'acido_corrosivo'),
+      acidBreaks,
+      weaponPiercesParrudo: weaponModifier.piercesParrudo
+    });
 
-    // Se o ladrão tiver Ácido Corrosivo, tenta furar o Parrudo
-    if (hasItem(userId, 'acido_corrosivo')) {
+    if (gate.thornTriggered) {
+      const multa = computeThornPenalty(getCoins(userId));
+      if (multa > 0) {
+        removeCoins(userId, multa);
+        addCoins(targetUser.id, multa);
+      }
+      const thornEmbed = new EmbedBuilder()
+        .setColor('#8B008B')
+        .setTitle('🛡️ ESCUDO DE ESPINHOS!')
+        .setDescription(`**${message.author.username}** tentou roubar **${targetUser.username}** enquanto ele estava PARRUDO e tomou a punição na hora.`)
+        .addFields({ name: '🩸 Multa Paga', value: `\`- ${formatCoins(multa)} Nanacoins\`` });
+      return message.reply({ embeds: [thornEmbed] });
+    }
+
+    if (gate.piercedByWeapon) {
+      if (weaponModifier.durabilityCost) consumeWeaponDurability(userId, weapon.instanceId, weaponModifier.durabilityCost);
+      const weaponEmbed = new EmbedBuilder()
+        .setColor('#FACC15')
+        .setTitle('⚔️ DEFESA PERFURADA!')
+        .setDescription(`A arma **${formatWeaponLabel(weapon)}** furou o Parrudo de **${targetUser.username}** e o roubo vai acontecer!`);
+      await message.channel.send({ embeds: [weaponEmbed] });
+    } else if (gate.acidConsumed) {
       removeItem(userId, 'acido_corrosivo', 1); // Consome o item sempre
 
-      const furou = isSuperAdmin(userId) || (Math.random() < config.static.app.duel.acidBreakChance);
-
-      if (furou) {
+      if (gate.allowed) {
         // Ácido funcionou! O roubo prossegue normalmente (não retorna aqui)
         const acidEmbed = new EmbedBuilder()
           .setColor('#00FF00')
@@ -152,7 +188,7 @@ async function handleRoubarCommand(message, text) {
           .setFooter({ text: 'O item foi consumido mesmo assim.' });
         return message.reply({ embeds: [failEmbed] });
       }
-    } else {
+    } else if (!gate.allowed) {
       return message.reply(`🛡️ O usuário ${targetUser.username} tomou o suco e está **PARRUDO**! Ele está imune a roubos no momento.\n💡 *Dica: Compre um **Ácido Corrosivo 🧪** na \`!loja\` para ter 45% de chance de furar o escudo!*`);
     }
   }
@@ -195,7 +231,7 @@ async function handleRoubarCommand(message, text) {
     const embeds = [];
 
     if (hasEscudoEspinhos(targetUser.id)) {
-      const multa = Math.floor(myCoins * config.static.app.duel.thornPenaltyPercent);
+      const multa = computeThornPenalty(myCoins);
       removeCoins(userId, multa);
       addCoins(targetUser.id, multa);
       
@@ -390,7 +426,27 @@ async function handleButtonInteraction(interaction) {
       }
     }
 
-    const duelResult = resolveDuel(duel.p1, duel.p2);
+    const p1Weapon = getEquippedWeapon(duel.p1.id);
+    const p2Weapon = getEquippedWeapon(duel.p2.id);
+    const p1WeaponMod = computeDuelWeaponModifier(p1Weapon, duel.p2.choice);
+    const p2WeaponMod = computeDuelWeaponModifier(p2Weapon, duel.p1.choice);
+
+    let duelResult;
+    if (p1WeaponMod.piercesDefense && duel.p2.choice === "Defesa") {
+      duelResult = { winner: duel.p1, loser: duel.p2, reason: `${p1Weapon.def.name} furou a Defesa do oponente` };
+    } else if (p2WeaponMod.piercesDefense && duel.p1.choice === "Defesa") {
+      duelResult = { winner: duel.p2, loser: duel.p1, reason: `${p2Weapon.def.name} furou a Defesa do oponente` };
+    } else {
+      duelResult = resolveDuel(duel.p1, duel.p2);
+      if (!duelResult.winner && p1WeaponMod.power !== p2WeaponMod.power) {
+        duelResult = p1WeaponMod.power > p2WeaponMod.power
+          ? { winner: duel.p1, loser: duel.p2, reason: `${p1Weapon.def.name} decidiu o empate pela força da arma` }
+          : { winner: duel.p2, loser: duel.p1, reason: `${p2Weapon.def.name} decidiu o empate pela força da arma` };
+      }
+    }
+
+    if (p1Weapon && p1WeaponMod.durabilityCost) consumeWeaponDurability(duel.p1.id, p1Weapon.instanceId, p1WeaponMod.durabilityCost);
+    if (p2Weapon && p2WeaponMod.durabilityCost) consumeWeaponDurability(duel.p2.id, p2Weapon.instanceId, p2WeaponMod.durabilityCost);
     const winner = duelResult.winner || "Empate";
     const reason = duelResult.reason;
 

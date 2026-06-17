@@ -17,7 +17,8 @@
     "chestIntervalMs": 3600000,
     "chestExpireMs": 600000,
     "chestReward": 200,
-    "bossIntervalMs": 43200000
+    "bossIntervalMs": 43200000,
+    "miniBossIntervalMs": 21600000
   },
   "forca": {
     "timeoutMs": 300000,
@@ -110,12 +111,96 @@
     }
   },
   "boss": {
-    "hp": 10000,
-    "prize": 10000,
-    "expireMs": 900000,
-    "attackCooldownMs": 10000,
-    "damageMin": 50,
-    "damageMax": 150
+    "world": {
+      "id": "world",
+      "name": "World Boss",
+      "hp": 10000,
+      "prize": 10000,
+      "expireMs": 900000,
+      "prompt": "a giant fantasy monster, epic boss battle, digital art, masterpiece, high quality, highly detailed, dramatic lighting"
+    },
+    "mini": {
+      "id": "mini",
+      "name": "Mini Boss",
+      "hp": 5000,
+      "prize": 5000,
+      "expireMs": 600000,
+      "prompt": "a dangerous fantasy mini boss, compact raid creature, digital art, high quality, dramatic lighting"
+    },
+    "actions": {
+      "basic": {
+        "label": "Ataque",
+        "style": "Danger",
+        "cooldownMs": 10000,
+        "damageMin": 50,
+        "damageMax": 150,
+        "weaponMultiplier": 1
+      },
+      "heavy": {
+        "label": "Golpe Pesado",
+        "style": "Primary",
+        "cooldownMs": 20000,
+        "damageMin": 120,
+        "damageMax": 260,
+        "weaponMultiplier": 1.35
+      },
+      "charge": {
+        "label": "Carregar",
+        "style": "Secondary",
+        "cooldownMs": 15000,
+        "damageMin": 20,
+        "damageMax": 60,
+        "chargeBonus": 1.5,
+        "weaponMultiplier": 0.75
+      },
+      "weapon": {
+        "label": "Usar Arma",
+        "style": "Success",
+        "cooldownMs": 12000,
+        "damageMin": 40,
+        "damageMax": 90,
+        "weaponMultiplier": 1.8
+      }
+    },
+    "phases": [
+      {
+        "id": "inicio",
+        "label": "Fase I",
+        "minHpPercent": 0.7,
+        "weakness": "espada",
+        "resistance": "cajado",
+        "weaknessMultiplier": 1.25,
+        "resistanceMultiplier": 0.85
+      },
+      {
+        "id": "furia",
+        "label": "Fase II",
+        "minHpPercent": 0.35,
+        "weakness": "arco",
+        "resistance": "martelo",
+        "weaknessMultiplier": 1.3,
+        "resistanceMultiplier": 0.85
+      },
+      {
+        "id": "final",
+        "label": "Fase Final",
+        "minHpPercent": 0,
+        "weakness": "cajado",
+        "resistance": "adaga",
+        "weaknessMultiplier": 1.4,
+        "resistanceMultiplier": 0.8
+      }
+    ],
+    "topBonus": [0.15, 0.1, 0.05],
+    "minimumDamageForPrize": 1
+  },
+  "market": {
+    "orderExpireMs": 86400000,
+    "historyLimit": 100,
+    "systemSellPercent": 0.55,
+    "suggestedPriceFloor": 0.5,
+    "suggestedPriceCeil": 2.5,
+    "maxActiveOrdersPerUser": 10
   },
   "daily": {
     "cooldownMs": 86400000,

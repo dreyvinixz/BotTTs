@@ -1,0 +1,136 @@
+{
+  "rarities": {
+    "comum": { "label": "Comum", "color": "#9CA3AF", "priceMultiplier": 1 },
+    "raro": { "label": "Raro", "color": "#8B5CF6", "priceMultiplier": 2.4 },
+    "epico": { "label": "Epico", "color": "#EC4899", "priceMultiplier": 4.2 },
+    "lendario": { "label": "Lendario", "color": "#FACC15", "priceMultiplier": 8 }
+  },
+  "classes": {
+    "espada": { "label": "Espadas" },
+    "machado": { "label": "Machados" },
+    "arco": { "label": "Arcos" },
+    "cajado": { "label": "Cajados" },
+    "adaga": { "label": "Adagas" },
+    "martelo": { "label": "Martelos" }
+  },
+  "weapons": {
+    "espada_madeira": {
+      "name": "Espada de Madeira",
+      "class": "espada",
+      "rarity": "comum",
+      "basePrice": 650,
+      "durability": 18,
+      "bossDamage": 35,
+      "duelPower": 3,
+      "pierceParrudoChance": 0.02,
+      "pierceDefenseChance": 0.04,
+      "lootWeight": 30,
+      "shopEnabled": true
+    },
+    "adaga_ferro": {
+      "name": "Adaga de Ferro",
+      "class": "adaga",
+      "rarity": "comum",
+      "basePrice": 800,
+      "durability": 16,
+      "bossDamage": 42,
+      "duelPower": 5,
+      "pierceParrudoChance": 0.03,
+      "pierceDefenseChance": 0.08,
+      "lootWeight": 25,
+      "shopEnabled": true
+    },
+    "arco_cacador": {
+      "name": "Arco do Cacador",
+      "class": "arco",
+      "rarity": "raro",
+      "basePrice": 2200,
+      "durability": 20,
+      "bossDamage": 95,
+      "duelPower": 8,
+      "pierceParrudoChance": 0.06,
+      "pierceDefenseChance": 0.12,
+      "lootWeight": 16,
+      "shopEnabled": true
+    },
+    "espada_chamas": {
+      "name": "Espada de Chamas",
+      "class": "espada",
+      "rarity": "raro",
+      "basePrice": 2800,
+      "durability": 22,
+      "bossDamage": 120,
+      "duelPower": 10,
+      "pierceParrudoChance": 0.08,
+      "pierceDefenseChance": 0.1,
+      "lootWeight": 14,
+      "shopEnabled": true
+    },
+    "machado_trovao": {
+      "name": "Machado do Trovao",
+      "class": "machado",
+      "rarity": "epico",
+      "basePrice": 5200,
+      "durability": 24,
+      "bossDamage": 210,
+      "duelPower": 15,
+      "pierceParrudoChance": 0.14,
+      "pierceDefenseChance": 0.18,
+      "lootWeight": 8,
+      "shopEnabled": true
+    },
+    "martelo_abismo": {
+      "name": "Martelo do Abismo",
+      "class": "martelo",
+      "rarity": "epico",
+      "basePrice": 6500,
+      "durability": 26,
+      "bossDamage": 250,
+      "duelPower": 12,
+      "pierceParrudoChance": 0.18,
+      "pierceDefenseChance": 0.14,
+      "lootWeight": 6,
+      "shopEnabled": true
+    },
+    "espada_gelo": {
+      "name": "Espada de Gelo",
+      "class": "espada",
+      "rarity": "lendario",
+      "basePrice": 15000,
+      "durability": 30,
+      "bossDamage": 420,
+      "duelPower": 25,
+      "pierceParrudoChance": 0.3,
+      "pierceDefenseChance": 0.28,
+      "lootWeight": 2,
+      "shopEnabled": true,
+      "ability": {
+        "id": "freeze_boss",
+        "label": "Congelamento",
+        "description": "Chance de dobrar o dano contra boss em fase final.",
+        "bossFinalPhaseMultiplier": 2,
+        "chance": 0.25
+      }
+    },
+    "cajado_estelar": {
+      "name": "Cajado Estelar",
+      "class": "cajado",
+      "rarity": "lendario",
+      "basePrice": 18000,
+      "durability": 28,
+      "bossDamage": 380,
+      "duelPower": 30,
+      "pierceParrudoChance": 0.26,
+      "pierceDefenseChance": 0.35,
+      "lootWeight": 2,
+      "shopEnabled": true,
+      "ability": {
+        "id": "arcane_pierce",
+        "label": "Perfuração Arcana",
+        "description": "Aumenta perfuração de defesa em duelos.",
+        "duelPierceBonus": 0.2,
+        "chance": 0.3
+      }
+    }
+  }
+}

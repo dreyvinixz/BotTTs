@@ -1,6 +1,7 @@
 const { ActionRowBuilder, ButtonBuilder, ButtonStyle, MessageFlags, StringSelectMenuBuilder } = require("discord.js");
 const config = require("../core/config");
 const { getCoins, addCoins, removeCoins, formatCoins } = require("./economy");
+const { listWeaponDefs, grantWeapon, formatWeaponLabel } = require("./weapons");
 
 // Estruturas de memória para guardar os boosts ativos
 // Map<userId, { mult: number, expire: timestamp }>
@@ -73,32 +74,120 @@ const cleanupInterval = setInterval(() => {
 }, config.static.app.boosts.cleanupIntervalMs);
 cleanupInterval.unref?.();
 
-// Handler do comando !boost
-async function handleBoostCommand(message) {
+function shopButtons(ownerId) {
+  return [
+    new ActionRowBuilder().addComponents(
+      new ButtonBuilder().setCustomId(`shop_cat_boosts_${ownerId}`).setLabel("Boosts").setStyle(ButtonStyle.Primary),
+      new ButtonBuilder().setCustomId(`shop_cat_items_${ownerId}`).setLabel("Itens").setStyle(ButtonStyle.Secondary),
+      new ButtonBuilder().setCustomId(`shop_cat_weapons_${ownerId}`).setLabel("Armas").setStyle(ButtonStyle.Danger),
+      new ButtonBuilder().setCustomId(`shop_cat_legendary_${ownerId}`).setLabel("Lendarias").setStyle(ButtonStyle.Success),
+      new ButtonBuilder().setCustomId(`shop_cat_market_${ownerId}`).setLabel("Bolsa").setStyle(ButtonStyle.Secondary)
+    )
+  ];
+}
+
+function boostOptions(category) {
+  return BOOST_MENU_ORDER
+    .filter((key) => {
+      const item = BOOST_PRICES[key];
+      if (category === "items") return ["item", "freeItem", "spawnBoss"].includes(item.type);
+      if (category === "boosts") return !["item", "freeItem", "spawnBoss"].includes(item.type);
+      return true;
+    })
+    .map((key) => {
+      const item = BOOST_PRICES[key];
+      return {
+        label: item.menuLabel || item.label,
+        description: item.description,
+        value: key,
+        emoji: item.emoji
+      };
+    });
+}
+
+function buildBoostSelect(ownerId, category = "all") {
   const row = new ActionRowBuilder().addComponents(
     new StringSelectMenuBuilder()
-      .setCustomId(`boost_select_${message.author.id}`)
-      .setPlaceholder('Escolha um Boost para comprar...')
-      .addOptions(BOOST_MENU_ORDER.map((key) => {
-        const item = BOOST_PRICES[key];
-        return {
-          label: item.menuLabel || item.label,
-          description: item.description,
-          value: key,
-          emoji: item.emoji
-        };
-      }))
+      .setCustomId(`boost_select_${ownerId}`)
+      .setPlaceholder('Escolha uma compra...')
+      .addOptions(boostOptions(category).slice(0, 25))
   );
+  return row;
+}
 
+function buildWeaponSelect(ownerId, rarity = "all") {
+  const weapons = listWeaponDefs({
+    shopEnabled: true,
+    rarity: rarity === "all" ? undefined : rarity
+  }).slice(0, 25);
+
+  return new ActionRowBuilder().addComponents(
+    new StringSelectMenuBuilder()
+      .setCustomId(`weapon_select_${ownerId}`)
+      .setPlaceholder("Escolha uma arma para comprar...")
+      .addOptions(weapons.map((weapon) => ({
+        label: `${weapon.name} (${weapon.rarity})`.slice(0, 100),
+        description: `${formatCoins(weapon.basePrice)} NC | ${weapon.durability} usos | Dano boss +${weapon.bossDamage}`.slice(0, 100),
+        value: weapon.id
+      })))
+  );
+}
+
+// Handler do comando !boost
+async function handleBoostCommand(message) {
   await message.reply({
-    content: "🚀 **LOJA DE BOOSTS CLANDESTINA** 🚀\nAumente seus lucros nos minigames ou melhore suas chances de roubo!\n*(Este menu está trancado para você. Outros jogadores não podem usá-lo)*",
-    components: [row]
+    content: "🏪 **MERCADO NANACOIN**\nEscolha uma categoria. Armas compradas aqui entram no seu inventário e podem ser equipadas com `!equipar <id>`.",
+    components: shopButtons(message.author.id)
+  });
+}
+
+async function showShopCategory(interaction, category) {
+  const ownerId = interaction.customId.split("_").at(-1);
+  if (interaction.user.id !== ownerId) {
+    return interaction.reply({ content: "❌ Esta loja foi aberta por outro jogador! Digite `!loja` no chat para abrir a sua.", flags: MessageFlags.Ephemeral });
+  }
+
+  if (category === "market") {
+    return interaction.reply({ content: "📈 A Bolsa agora fica centralizada em `!bolsa`.", flags: MessageFlags.Ephemeral });
+  }
+
+  if (category === "weapons" || category === "legendary") {
+    return interaction.update({
+      content: category === "legendary" ? "🟡 **ARMAS LENDÁRIAS**" : "⚔️ **LOJA DE ARMAS**",
+      components: [buildWeaponSelect(ownerId, category === "legendary" ? "lendario" : "all"), ...shopButtons(ownerId)]
+    });
+  }
+
+  return interaction.update({
+    content: category === "items" ? "🎒 **ITENS DA LOJA**" : "🚀 **BOOSTS DA LOJA**",
+    components: [buildBoostSelect(ownerId, category), ...shopButtons(ownerId)]
   });
 }
 
 // Handler da interação do menu
 async function handleBoostInteraction(interaction) {
-  if (!interaction.isStringSelectMenu() || !interaction.customId.startsWith('boost_select_')) return;
+  if (interaction.isButton() && interaction.customId.startsWith("shop_cat_")) {
+    return showShopCategory(interaction, interaction.customId.split("_")[2]);
+  }
+
+  if (interaction.isStringSelectMenu() && interaction.customId.startsWith("weapon_select_")) {
+    const ownerId = interaction.customId.split("_")[2];
+    if (interaction.user.id !== ownerId) {
+      return interaction.reply({ content: "❌ Esta loja foi aberta por outro jogador! Digite `!loja` no chat para abrir a sua.", flags: MessageFlags.Ephemeral });
+    }
+    const weaponId = interaction.values[0];
+    const weapon = listWeaponDefs().find((item) => item.id === weaponId);
+    if (!weapon) return interaction.reply({ content: "Arma inválida.", flags: MessageFlags.Ephemeral });
+    const balance = getCoins(interaction.user.id);
+    if (balance < weapon.basePrice) {
+      return interaction.reply({ content: `❌ Você precisa de **${formatCoins(weapon.basePrice)} NC** para comprar ${weapon.name}.`, flags: MessageFlags.Ephemeral });
+    }
+    removeCoins(interaction.user.id, weapon.basePrice);
+    const instance = grantWeapon(interaction.user.id, weaponId);
+    return interaction.reply({ content: `✅ Você comprou **${weapon.name}** por ${formatCoins(weapon.basePrice)} NC. ID: \`${instance.instanceId}\``, flags: MessageFlags.Ephemeral });
+  }
+
+  if (!interaction.isStringSelectMenu() || !interaction.customId.startsWith('boost_select_')) return false;
 
   const ownerId = interaction.customId.split('_')[2];
   if (interaction.user.id !== ownerId) {

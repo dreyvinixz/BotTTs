@@ -18,6 +18,20 @@ async function applyReward(interaction, reward, userId) {
     return { text: reward.text };
   }
 
+  if (reward.type === "weapon") {
+    const { grantWeapon, getWeaponDef, formatWeaponLabel } = require("./weapons");
+    const instance = grantWeapon(userId, reward.value);
+    const def = instance ? getWeaponDef(instance.weaponId) : null;
+    return { text: reward.text || `uma arma **${def ? formatWeaponLabel(def) : reward.value}**!` };
+  }
+
+  if (reward.type === "weaponByRarity") {
+    const { grantRandomWeapon, getWeaponDef, formatWeaponLabel } = require("./weapons");
+    const instance = grantRandomWeapon(userId, { rarity: reward.rarity });
+    const def = instance ? getWeaponDef(instance.weaponId) : null;
+    return { text: reward.text || `uma arma **${def ? formatWeaponLabel(def) : reward.rarity}**!` };
+  }
+
   if (reward.type === "coinsRange") {
     const amount = integerBetween(reward.min, reward.max);
     addCoins(userId, amount);
