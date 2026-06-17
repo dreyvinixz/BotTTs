@@ -46,6 +46,13 @@ Create your local environment file:
 Copy-Item examples/.env.example .env
 ```
 
+Create your local Ollama Modelfile:
+
+```powershell
+New-Item -ItemType Directory -Force local/ollama
+Copy-Item examples/Modelfile.example local/ollama/Modelfile
+```
+
 Edit `.env` and set at least:
 
 ```env
@@ -80,9 +87,8 @@ npm start
 | `!saldo` | Check your Nanacoins balance. |
 | `!rank` | View the global richest players. |
 | `!roubar @user` | Try to steal Nanacoins (risks going to prison). |
-| `!duelo @user <amount>` | Initiate a tactical button duel. |
-| `!aventura` | Start the Multiverse RPG and Enigma Hub. |
-| `!forca` | Play AI-generated Hangman game. |
+| `!games` | Open the game hub for Hangman, Multiverse/Trivia, and Duels. |
+| `!fliperama` | Open lootboxes and arcade rewards. |
 | `!nana <text>` | Casual/persona LLM response. |
 | `!question <question>` | Serious professional answer. |
 | `!img <prompt>` | Generate a realistic image. |
@@ -138,7 +144,7 @@ FORGE_HOST=http://127.0.0.1:7860
 Image prompt behavior is configured by:
 
 ```text
-politicas_imagem.txt
+data/policies/politicas_imagem.txt
 ```
 
 Forge model names, image size, steps, sampler, and negative prompts are configured through `.env`.
@@ -157,7 +163,7 @@ The bot stays in voice for the idle timeout after the last speech, then disconne
 Google Cloud TTS can be enabled by setting:
 
 ```env
-GOOGLE_APPLICATION_CREDENTIALS=path/to/google_credentials.json
+GOOGLE_APPLICATION_CREDENTIALS=local/secrets/google_credentials.json
 ```
 
 ## Runtime Data
@@ -172,15 +178,39 @@ Default files:
 
 - `data/gifs.json`
 - `data/fofocas.json`
+- `data/economia.json`
+- `data/inventory.json`
+- `data/timers.json`
+- `data/media/`
+- `data/policies/`
 
 These files are local runtime state and should not contain source code configuration.
+
+## Project Structure
+
+- `index.js` - process entrypoint.
+- `package.json` - npm scripts and dependencies.
+- `scripts/app/` - Discord client and command router.
+- `scripts/admin/` - superadmin commands and permission checks.
+- `scripts/ai/` - chat, questions, images, and Ollama integrations.
+- `scripts/core/` - config, storage, random helpers, UI builders, services, and shared utils.
+- `scripts/economy/` - Nanacoins, inventory, boosts, lootboxes, and arcade rewards.
+- `scripts/games/` - Forca, RPG/Trivia, duels, boss events, menus, and game data loaders.
+- `scripts/voice/` - TTS and voice-channel handling.
+- `scripts/features/` - small engagement features.
+- `data/config/` and `data/games/` - editable static config and game data.
+- `data/policies/` - local persona and image policy files.
+- `local/` - ignored machine-local files such as Ollama Modelfile and secrets.
+- `tools/` - manual utilities and local startup scripts.
+- `examples/` - public templates for local files.
+- `tests/` - `node:test` coverage for config, permissions, economy, games, and interactions.
 
 ## Policy Files
 
 The bot reads policy/persona files at runtime:
 
-- `politicas.txt` for general chat/persona behavior
-- `politicas_imagem.txt` for image-prompt behavior only
+- `data/policies/politicas.txt` for general chat/persona behavior
+- `data/policies/politicas_imagem.txt` for image-prompt behavior only
 
 These files are intentionally separate so image prompting can be tuned without changing chat behavior.
 
@@ -218,8 +248,14 @@ Regenerate the Ollama model:
 npm run ollama:create
 ```
 
+Run the manual Trivia/Ollama diagnostic:
+
+```powershell
+npm run test:trivia
+```
+
 ## Security Notes
 
-Never commit `.env`, Discord tokens, API keys, Google credentials, or generated media.
+Never commit `.env`, `local/`, Discord tokens, API keys, Google credentials, or generated media.
 
 Use `examples/.env.example` as the public template and keep local secrets in `.env`.

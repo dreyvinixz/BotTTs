@@ -1,0 +1,129 @@
+{
+  "boosts": {
+    "game_2x": {
+      "type": "game",
+      "mult": 2,
+      "durationMs": 3600000,
+      "cost": 1000,
+      "label": "Boost Games 2x (1 hora)",
+      "menuLabel": "Game Boost 2x",
+      "description": "Dobra o dinheiro ganho na Forca e Show do Milhão (1h) - 1k",
+      "emoji": "🎮"
+    },
+    "game_3x": {
+      "type": "game",
+      "mult": 3,
+      "durationMs": 2400000,
+      "cost": 5000,
+      "label": "Boost Games 3x (40 minutos)",
+      "menuLabel": "Game Boost 3x",
+      "description": "Triplica a grana dos jogos (40 min) - 5k Nanacoins",
+      "emoji": "🕹️"
+    },
+    "game_4x": {
+      "type": "game",
+      "mult": 4,
+      "durationMs": 1800000,
+      "cost": 10000,
+      "label": "Boost Games 4x (30 minutos)",
+      "menuLabel": "Game Boost 4x",
+      "description": "Quadruplica o prêmio dos jogos (30 min) - 10k Nanacoins",
+      "emoji": "🚀"
+    },
+    "steal_10": {
+      "type": "steal",
+      "chanceExtra": 0.1,
+      "durationMs": 600000,
+      "cost": 800,
+      "label": "Boost Roubo +10% (10 minutos)",
+      "menuLabel": "Roubo Boost +10%",
+      "description": "60% de chance de roubo (10 min) - 800 Nanacoins",
+      "emoji": "🥷"
+    },
+    "steal_20": {
+      "type": "steal",
+      "chanceExtra": 0.2,
+      "durationMs": 300000,
+      "cost": 1600,
+      "label": "Boost Roubo +20% (5 minutos)",
+      "menuLabel": "Roubo Boost +20%",
+      "description": "70% de chance de roubo (5 min) - 1.6k Nanacoins",
+      "emoji": "💎"
+    },
+    "pe_cabra": {
+      "type": "buff",
+      "buff": "peCabra",
+      "durationMs": 300000,
+      "cost": 1000,
+      "label": "Pé de Cabra (5 minutos)",
+      "menuLabel": "Pé de Cabra",
+      "description": "Roubos de sucesso tiram 40% a 80% da grana (5 min) - 1k",
+      "emoji": "🔧"
+    },
+    "escudo_espinhos": {
+      "type": "buff",
+      "buff": "escudoEspinhos",
+      "durationMs": 7200000,
+      "cost": 1000,
+      "label": "Escudo de Espinhos (2 horas)",
+      "menuLabel": "Escudo de Espinhos",
+      "description": "Se ladrão falhar, ele te paga 10% do dinheiro dele (2h) - 1k",
+      "emoji": "🛡️"
+    },
+    "pe_coelho": {
+      "type": "item",
+      "cost": 250,
+      "label": "Pé de Coelho (1 uso)",
+      "menuLabel": "Pé de Coelho",
+      "description": "Garante vitória e pula castigo no próximo Beijar o Muro - 250",
+      "emoji": "🐰"
+    },
+    "bomba_fumaca": {
+      "type": "item",
+      "cost": 500,
+      "label": "Bomba de Fumaça (1 uso)",
+      "menuLabel": "Bomba de Fumaça",
+      "description": "Permite escapar da prisão ao falhar 3x no roubo - 500",
+      "emoji": "💨"
+    },
+    "bomba_fumaca_free": {
+      "type": "freeItem",
+      "grants": "bomba_fumaca",
+      "cost": 0,
+      "label": "Bomba de Fumaça (Grátis)",
+      "menuLabel": "Bomba de Fumaça (Grátis)",
+      "description": "Foge da cadeia no 3º roubo falho. Resgate a cada 12h",
+      "emoji": "💨"
+    },
+    "acido_corrosivo": {
+      "type": "item",
+      "cost": 2000,
+      "label": "Ácido Corrosivo (1 uso)",
+      "menuLabel": "Ácido Corrosivo",
+      "description": "45% de chance de furar o Parrudo da vítima no roubo (1 uso) - 2k",
+      "emoji": "🧪"
+    },
+    "invocar_boss": {
+      "type": "spawnBoss",
+      "cost": 10000,
+      "label": "Invocação do World Boss",
+      "menuLabel": "Invocação de Boss",
+      "description": "Spawna o World Boss instantaneamente em todos canais! - 10k",
+      "emoji": "👹"
+    }
+  },
+  "menuOrder": [
+    "bomba_fumaca_free",
+    "game_2x",
+    "game_3x",
+    "game_4x",
+    "steal_10",
+    "steal_20",
+    "pe_coelho",
+    "bomba_fumaca",
+    "pe_cabra",
+    "escudo_espinhos",
+    "acido_corrosivo",
+    "invocar_boss"
+  ]
+}

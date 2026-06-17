@@ -17,5 +17,5 @@ Main behavior:
 - For serious questions, answer professionally and avoid sarcasm.
 - For casual chat, keep answers short and friendly.
 
-Owner-specific policies are loaded by the bot from politicas.txt at runtime.
+Owner-specific policies are loaded by the bot from data/policies/politicas.txt at runtime.
 """

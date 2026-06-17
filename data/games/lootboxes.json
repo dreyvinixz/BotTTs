@@ -1,0 +1,167 @@
+{
+  "animationDelayMs": 800,
+  "frames": [
+    "`[ 🪙 | 💨 | 🐰 ]`",
+    "`[ 💥 | 🎲 | 💎 ]`",
+    "`[ 🧪 | 🔧 | 🎮 ]`",
+    "`[ 🛡️ | 🪙 | 👹 ]`"
+  ],
+  "boxes": {
+    "bronze": {
+      "cost": 500,
+      "label": "📦 Caixa de Bronze",
+      "desc": "Prêmios: Pé de Coelho, Bomba de Fumaça, Pé de Cabra, Boosts e Moedas.",
+      "color": "#CD7F32",
+      "buttonLabel": "Abrir Bronze (500)",
+      "buttonStyle": "Secondary",
+      "rewards": [
+        {
+          "weight": 15,
+          "type": "boost",
+          "value": "pe_coelho",
+          "text": "um **Pé de Coelho 🐰**!"
+        },
+        {
+          "weight": 15,
+          "type": "boost",
+          "value": "steal_10",
+          "text": "um **Boost Roubo +10% 🥷** (10 minutos)!"
+        },
+        {
+          "weight": 10,
+          "type": "boost",
+          "value": "bomba_fumaca",
+          "text": "uma **Bomba de Fumaça 💨**!"
+        },
+        {
+          "weight": 10,
+          "type": "boost",
+          "value": "pe_cabra",
+          "text": "um **Pé de Cabra 🔧** (5 minutos)!"
+        },
+        {
+          "weight": 30,
+          "type": "coinsRange",
+          "min": 100,
+          "max": 1000,
+          "text": "**{amount} Nanacoins 🪙**!"
+        },
+        {
+          "weight": 20,
+          "type": "nothing",
+          "text": "absolutamente **NADA**! 🎲 A caixa estava vazia."
+        }
+      ]
+    },
+    "prata": {
+      "cost": 2500,
+      "label": "🎁 Caixa de Prata",
+      "desc": "Prêmios: Ácido, Game Boost 2x, Escudo Espinhos, Boost Roubo +20%, Moedas.",
+      "color": "#C0C0C0",
+      "buttonLabel": "Abrir Prata (2.5k)",
+      "buttonStyle": "Primary",
+      "rewards": [
+        {
+          "weight": 10,
+          "type": "boost",
+          "value": "acido_corrosivo",
+          "text": "um **Ácido Corrosivo 🧪**!"
+        },
+        {
+          "weight": 10,
+          "type": "boost",
+          "value": "game_2x",
+          "text": "um **Game Boost 2x 🎮** (1 hora)!"
+        },
+        {
+          "weight": 10,
+          "type": "boost",
+          "value": "escudo_espinhos",
+          "text": "um **Escudo de Espinhos 🛡️** (2 horas)!"
+        },
+        {
+          "weight": 10,
+          "type": "boost",
+          "value": "steal_20",
+          "text": "um **Boost Roubo +20% 💎** (5 minutos)!"
+        },
+        {
+          "weight": 10,
+          "type": "boost",
+          "value": "pe_cabra",
+          "text": "um **Pé de Cabra 🔧** (5 minutos)!"
+        },
+        {
+          "weight": 10,
+          "type": "boost",
+          "value": "game_3x",
+          "text": "um **Game Boost 3x 🕹️** (40 minutos)!"
+        },
+        {
+          "weight": 25,
+          "type": "coinsRange",
+          "min": 1000,
+          "max": 4000,
+          "text": "**{amount} Nanacoins 🪙**!"
+        },
+        {
+          "weight": 15,
+          "type": "nothing",
+          "text": "**NADA**! 🎲 Você abriu a caixa e não encontrou nada."
+        }
+      ]
+    },
+    "ouro": {
+      "cost": 7000,
+      "label": "💎 Caixa de Ouro",
+      "desc": "Prêmios: Boss, Game Boost 3x/4x, Ácido e até 10k NC. Risco: Perder 5k.",
+      "color": "#FFD700",
+      "buttonLabel": "Abrir Ouro (7k)",
+      "buttonStyle": "Success",
+      "rewards": [
+        {
+          "weight": 15,
+          "type": "coinsPenalty",
+          "amount": 5000,
+          "color": "#FF0000",
+          "text": "**AZAR SUPREMO!** 📉 A caixa estava amaldiçoada! Você perdeu **{amount} Nanacoins** extras do seu saldo."
+        },
+        {
+          "weight": 15,
+          "type": "spawnBoss",
+          "text": "a **Invocação do World Boss 👹**! O chefão acaba de aparecer neste canal!"
+        },
+        {
+          "weight": 10,
+          "type": "boost",
+          "value": "game_4x",
+          "text": "um **Game Boost 4x 🚀** (30 minutos)!"
+        },
+        {
+          "weight": 10,
+          "type": "boost",
+          "value": "game_3x",
+          "text": "um **Game Boost 3x 🕹️** (40 minutos)!"
+        },
+        {
+          "weight": 10,
+          "type": "boost",
+          "value": "acido_corrosivo",
+          "text": "um **Ácido Corrosivo 🧪**!"
+        },
+        {
+          "weight": 30,
+          "type": "coinsRange",
+          "min": 5000,
+          "max": 10000,
+          "text": "o prêmio gordo de **{amount} Nanacoins 🪙**!"
+        },
+        {
+          "weight": 10,
+          "type": "nothing",
+          "text": "**NADA**! 🎲 A caixa estava vazia."
+        }
+      ]
+    }
+  }
+}

@@ -1,3 +1,3 @@
-const { start } = require("./scripts/bot");
+const { start } = require("./scripts/app/bot");
 
 start();

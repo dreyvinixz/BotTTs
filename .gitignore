@@ -1,6 +1,7 @@
 node_modules/
 venv/
 stable-diffusion-webui-forge/
+local/
 
 .env
 .DS_Store
@@ -13,10 +14,12 @@ google_credentials.json
 *.jsonl
 
 # Personal runtime and policy files
-data/
+data/*
+!data/config/
+!data/config/**
+!data/games/
+!data/games/**
 Modelfile
-politicas.txt
-politicas_imagem.txt
 voz.mp3
 *.log
 *.mp3
