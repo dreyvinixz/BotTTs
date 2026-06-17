@@ -3,19 +3,10 @@ const config = require("./config");
 const { addCoins } = require("./economy");
 const { assertForgeReady } = require("./services");
 
-let activeBoss = null;
+const activeBosses = new Map();
 
-async function spawnWorldBoss(channel) {
-  if (activeBoss) return; // Já tem um boss ativo no servidor
-
-  activeBoss = {
-    hp: 10000,
-    maxHp: 10000,
-    damageDealt: new Map(), // userId -> damage
-    cooldowns: new Map(), // userId -> nextAttackTime
-    messageId: null,
-    timerId: null
-  };
+async function spawnWorldBoss(channels) {
+  // Let's create the payload once and then send it to each channel
 
   const row = new ActionRowBuilder().addComponents(
     new ButtonBuilder()
@@ -59,7 +50,7 @@ async function spawnWorldBoss(channel) {
   }
 
   const payloadMsg = {
-    content: `🚨 **ALERTA GLOBAL: UM WORLD BOSS APARECEU!** 🚨\n\nUma aberração colossal de **10.000 HP** invadiu o chat! Vocês têm **15 minutos** para derrotá-lo!\nQuem participar da batalha dividirá o grande prêmio de **10.000 Nanacoins 🪙** com base no dano causado.\n\nHP do Boss: \`10000 / 10000\``,
+    content: `@here 🚨 **ALERTA GLOBAL: UM WORLD BOSS APARECEU!** 🚨\n\nUma aberração colossal de **10.000 HP** invadiu o chat! Vocês têm **15 minutos** para derrotá-lo!\nQuem participar da batalha dividirá o grande prêmio de **10.000 Nanacoins 🪙** com base no dano causado.\n\nHP do Boss: \`10000 / 10000\``,
     components: [row]
   };
 
@@ -67,22 +58,39 @@ async function spawnWorldBoss(channel) {
     payloadMsg.files = [attachment];
   }
 
-  const msg = await channel.send(payloadMsg);
-  activeBoss.messageId = msg.id;
+  for (const channel of channels) {
+    if (!channel) continue;
+    try {
+      const msg = await channel.send(payloadMsg);
+      
+      const bossInstance = {
+        hp: 10000,
+        maxHp: 10000,
+        damageDealt: new Map(),
+        cooldowns: new Map(),
+        messageId: msg.id,
+        timerId: null
+      };
 
-  // Expira em 15 minutos
-  activeBoss.timerId = setTimeout(() => {
-    if (activeBoss && activeBoss.messageId === msg.id) {
-      msg.edit({ content: "⏰ **O BOSS FUGIU!** O tempo acabou e vocês não conseguiram derrotar a criatura...", components: [] }).catch(() => null);
-      activeBoss = null;
+      bossInstance.timerId = setTimeout(() => {
+        if (activeBosses.has(msg.id)) {
+          msg.edit({ content: "⏰ **O BOSS FUGIU!** O tempo acabou e vocês não conseguiram derrotar a criatura...", components: [] }).catch(() => null);
+          activeBosses.delete(msg.id);
+        }
+      }, 15 * 60 * 1000);
+
+      activeBosses.set(msg.id, bossInstance);
+    } catch (err) {
+      console.log(`⚠️ Falha ao spawnar World Boss no canal ${channel.id}: ${err.message}`);
     }
-  }, 15 * 60 * 1000);
+  }
 }
 
 async function handleBossInteraction(interaction) {
   if (!interaction.isButton() || interaction.customId !== "boss_attack_btn") return false;
 
-  if (!activeBoss || activeBoss.messageId !== interaction.message.id) {
+  const bossInstance = activeBosses.get(interaction.message.id);
+  if (!bossInstance) {
     await interaction.reply({ content: "Este boss já foi derrotado ou expirou!", flags: MessageFlags.Ephemeral });
     return true;
   }
@@ -91,8 +99,8 @@ async function handleBossInteraction(interaction) {
   const now = Date.now();
 
   // Cooldown de 10 segundos
-  if (activeBoss.cooldowns.has(userId)) {
-    const nextAttack = activeBoss.cooldowns.get(userId);
+  if (bossInstance.cooldowns.has(userId)) {
+    const nextAttack = bossInstance.cooldowns.get(userId);
     if (now < nextAttack) {
       const wait = Math.ceil((nextAttack - now) / 1000);
       await interaction.reply({ content: `⏳ Você precisa respirar! Aguarde **${wait}s** para atacar novamente.`, flags: MessageFlags.Ephemeral });
@@ -101,45 +109,42 @@ async function handleBossInteraction(interaction) {
   }
 
   // Define cooldown
-  activeBoss.cooldowns.set(userId, now + 10000);
+  bossInstance.cooldowns.set(userId, now + 10000);
 
   // Calcula dano aleatório (50 a 150, média 100)
   const dano = Math.floor(Math.random() * 101) + 50;
   
   // Deduz do HP
-  activeBoss.hp -= dano;
-  if (activeBoss.hp < 0) activeBoss.hp = 0;
+  bossInstance.hp -= dano;
+  if (bossInstance.hp < 0) bossInstance.hp = 0;
 
   // Soma o dano deste usuário
-  const totalUserDamage = (activeBoss.damageDealt.get(userId) || 0) + dano;
-  activeBoss.damageDealt.set(userId, totalUserDamage);
+  const totalUserDamage = (bossInstance.damageDealt.get(userId) || 0) + dano;
+  bossInstance.damageDealt.set(userId, totalUserDamage);
 
-  if (activeBoss.hp > 0) {
+  if (bossInstance.hp > 0) {
     await interaction.reply({ content: `💥 Você golpeou o boss e causou **${dano} de dano**!`, flags: MessageFlags.Ephemeral });
     
-    // Atualiza a mensagem a cada hit
+    // Atualiza APENAS a mensagem deste boss
     interaction.message.edit({
-      content: interaction.message.content.replace(/HP do Boss: \`\d+ \/ 10000\`/, `HP do Boss: \`${activeBoss.hp} / 10000\``)
+      content: interaction.message.content.replace(/HP do Boss: \`\d+ \/ 10000\`/, `HP do Boss: \`${bossInstance.hp} / 10000\``)
     }).catch(() => null);
     
     return true;
   } else {
     // BOSS DERROTADO!
-    if (activeBoss.timerId) clearTimeout(activeBoss.timerId);
+    if (bossInstance.timerId) clearTimeout(bossInstance.timerId);
     
     const prize = 10000;
-    const totalBossDamage = activeBoss.maxHp; // 5000
+    const totalBossDamage = bossInstance.maxHp; // 10000
 
     let winnersText = `🏆 **WORLD BOSS DERROTADO!** 🏆\nO monstro sucumbiu! O prêmio de **${prize} Nanacoins 🪙** foi dividido:\n\n`;
     
     // Calcula recompensas e lista top atacantes (max 10 na msg para n quebrar limite)
-    const sortedDamage = Array.from(activeBoss.damageDealt.entries()).sort((a, b) => b[1] - a[1]);
+    const sortedDamage = Array.from(bossInstance.damageDealt.entries()).sort((a, b) => b[1] - a[1]);
     
     for (let i = 0; i < sortedDamage.length; i++) {
       const [uId, dmg] = sortedDamage[i];
-      // A proporção é o dano do user / hp total do boss
-      // Mas se o dano passou um pouco, usamos maxHp pra n criar moedas a mais,
-      // ou dividimos baseado no dano total real que deram. Vamos usar maxHp pra conta.
       const proportion = dmg / totalBossDamage;
       const userPrize = Math.floor(prize * proportion);
       
@@ -160,8 +165,8 @@ async function handleBossInteraction(interaction) {
       winnersText += `\n*E mais ${sortedDamage.length - 10} heróis também receberam suas partes!*`;
     }
 
-    // Reset state
-    activeBoss = null;
+    // Remove do Map de bosses ativos
+    activeBosses.delete(interaction.message.id);
 
     await interaction.update({ components: [] }).catch(() => null);
     await interaction.message.edit({ content: winnersText, components: [] }).catch(() => null);

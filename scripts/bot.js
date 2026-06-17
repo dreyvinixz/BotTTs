@@ -16,7 +16,7 @@ const {
   maybeExtrairFofocas,
   maybeResponderEspontaneo
 } = require("./chat");
-const { handleForcaCommand, handleForcaThemeInteraction, checkForcaGuess, checkAndSpawnEvent, handleEventInteraction } = require("./games");
+const { handleForcaCommand, handleForcaThemeInteraction, checkForcaGuess, checkAndSpawnEvent, handleEventInteraction, EVENT_CHANNELS, resetBossTimer } = require("./games");
 const { getCoins, getTopPlayers, handleDoarCommand } = require("./economy");
 const { handleRoubarCommand, handleDueloCommand, handleButtonInteraction, handleTimeoutCommand, handleFiancaCommand, handleParrudoCommand, isPrisioneiro, handleBeijarMuroCommand } = require("./duel");
 const { handleAventuraCommand, handleRpgInteraction } = require("./rpg");
@@ -306,9 +306,32 @@ async function handleMessage(message) {
     return handleDailyCommand(message);
   }
 
+  if (isCommand(message, ["!fliperama", "!lootbox"])) {
+    const { handleFliperamaCommand } = require("./fliperama");
+    return handleFliperamaCommand(message);
+  }
+
   if (isCommand(message, ["!spawn_boss"])) {
+    if (message.author.id !== "762478935615078401") {
+      return message.reply("❌ Apenas o Superadmin pode usar este comando!");
+    }
     const { spawnWorldBoss } = require("./boss");
-    spawnWorldBoss(message.channel);
+    const { EVENT_CHANNELS, resetBossTimer } = require("./games");
+    
+    resetBossTimer(); // Reseta o contador para daqui a 12h
+    
+    const bossChannels = [];
+    for (const channelId of EVENT_CHANNELS) {
+      const bossChannel = message.client.channels.cache.get(channelId);
+      if (bossChannel) bossChannels.push(bossChannel);
+    }
+    
+    if (bossChannels.length > 0) {
+      spawnWorldBoss(bossChannels);
+      message.reply("✅ World Boss sumonado com sucesso em todos os canais de evento! O contador de 12h foi resetado.");
+    } else {
+      message.reply("❌ Não foi possível encontrar os canais de evento.");
+    }
     return;
   }
 
@@ -419,6 +442,9 @@ function start() {
 
       const { handleGamesInteraction } = require("./games_menu");
       if (await handleGamesInteraction(interaction)) return;
+
+      const { handleFliperamaInteraction } = require("./fliperama");
+      if (await handleFliperamaInteraction(interaction)) return;
 
       // Existing handlers at the end
       handleButtonInteraction(interaction).catch((err) => {

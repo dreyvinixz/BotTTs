@@ -15,20 +15,21 @@ const escudoBoosts = new Map();
 // Tabela de preços e configurações
 const BOOST_PRICES = {
   // Boosts para Games (Forca e Show do Milhão)
-  game_2x: { mult: 2, hours: 2, cost: 1000, label: "Boost Games 2x (2 horas)" },
-  game_3x: { mult: 3, hours: 1, cost: 5000, label: "Boost Games 3x (1 hora)" },
+  game_2x: { mult: 2, hours: 1, cost: 1000, label: "Boost Games 2x (1 hora)" },
+  game_3x: { mult: 3, hours: 40 / 60, cost: 5000, label: "Boost Games 3x (40 minutos)" },
   game_4x: { mult: 4, hours: 0.5, cost: 10000, label: "Boost Games 4x (30 minutos)" },
   
   // Boosts para Roubo (Aumento na chance base que é 50%)
-  steal_10: { chanceExtra: 0.10, mins: 5, cost: 800, label: "Boost Roubo +10% (5 minutos)" }, // Total 60%
-  steal_20: { chanceExtra: 0.20, mins: 3, cost: 1600, label: "Boost Roubo +20% (3 minutos)" }, // Total 70%
+  steal_10: { chanceExtra: 0.10, mins: 10, cost: 800, label: "Boost Roubo +10% (10 minutos)" }, // Total 60%
+  steal_20: { chanceExtra: 0.20, mins: 5, cost: 1600, label: "Boost Roubo +20% (5 minutos)" }, // Total 70%
   
   // Novos itens
   pe_cabra: { type: 'buff', mins: 5, cost: 1000, label: "Pé de Cabra (5 minutos)" },
   escudo_espinhos: { type: 'buff', mins: 120, cost: 1000, label: "Escudo de Espinhos (2 horas)" },
   pe_coelho: { type: 'item', cost: 250, label: "Pé de Coelho (1 uso)" },
-  bomba_fumaca: { type: 'item', cost: 0, label: "Bomba de Fumaça (Grátis)" },
-  acido_corrosivo: { type: 'item', cost: 2000, label: "Ácido Corrosivo (1 uso)" }
+  bomba_fumaca: { type: 'item', cost: 500, label: "Bomba de Fumaça (1 uso)" },
+  acido_corrosivo: { type: 'item', cost: 2000, label: "Ácido Corrosivo (1 uso)" },
+  invocar_boss: { type: 'item', cost: 10000, label: "Invocação do World Boss" }
 };
 
 // Funções para uso em outros módulos
@@ -97,36 +98,36 @@ async function handleBoostCommand(message) {
         {
           label: 'Bomba de Fumaça (Grátis)',
           description: 'Foge da cadeia no 3º roubo falho. Resgate a cada 12h',
-          value: 'bomba_fumaca',
+          value: 'bomba_fumaca_free',
           emoji: '💨'
         },
         {
           label: 'Game Boost 2x',
-          description: 'Dobro de moedas em Forca/Show (2h) - 1k Nanacoins',
+          description: 'Dobra o dinheiro ganho na Forca e Show do Milhão (1h) - 1k',
           value: 'game_2x',
           emoji: '🎮'
         },
         {
           label: 'Game Boost 3x',
-          description: 'Triplo de moedas em Forca/Show (1h) - 5k Nanacoins',
+          description: 'Triplica a grana dos jogos (40 min) - 5k Nanacoins',
           value: 'game_3x',
-          emoji: '🔥'
+          emoji: '🕹️'
         },
         {
           label: 'Game Boost 4x',
-          description: 'Quádruplo de moedas em Forca/Show (30m) - 10k Nanacoins',
+          description: 'Quadruplica o prêmio dos jogos (30 min) - 10k Nanacoins',
           value: 'game_4x',
-          emoji: '💥'
+          emoji: '🚀'
         },
         {
           label: 'Roubo Boost +10%',
-          description: '60% de chance de roubo (5 min) - 800 Nanacoins',
+          description: '60% de chance de roubo (10 min) - 800 Nanacoins',
           value: 'steal_10',
           emoji: '🥷'
         },
         {
           label: 'Roubo Boost +20%',
-          description: '70% de chance de roubo (3 min) - 1.6k Nanacoins',
+          description: '70% de chance de roubo (5 min) - 1.6k Nanacoins',
           value: 'steal_20',
           emoji: '💎'
         },
@@ -135,6 +136,12 @@ async function handleBoostCommand(message) {
           description: 'Garante vitória e pula castigo no próximo Beijar o Muro - 250',
           value: 'pe_coelho',
           emoji: '🐰'
+        },
+        {
+          label: 'Bomba de Fumaça',
+          description: 'Permite escapar da prisão ao falhar 3x no roubo - 500',
+          value: 'bomba_fumaca',
+          emoji: '💨'
         },
         {
           label: 'Pé de Cabra',
@@ -153,6 +160,12 @@ async function handleBoostCommand(message) {
           description: '45% de chance de furar o Parrudo da vítima no roubo (1 uso) - 2k',
           value: 'acido_corrosivo',
           emoji: '🧪'
+        },
+        {
+          label: 'Invocação de Boss',
+          description: 'Spawna o World Boss instantaneamente em todos canais! - 10k',
+          value: 'invocar_boss',
+          emoji: '👹'
         }
       )
   );
@@ -181,14 +194,14 @@ async function handleBoostInteraction(interaction) {
   }
 
   // Casos especiais
-  if (choice === 'bomba_fumaca') {
+  if (choice === 'bomba_fumaca_free') {
     const { addItem, canClaimSmokeBomb, updateSmokeBombTimer } = require("./inventory");
     if (!canClaimSmokeBomb(userId)) {
       return interaction.reply({ content: `❌ Você já resgatou sua Bomba de Fumaça recentemente! Volte depois de 12 horas.`, flags: MessageFlags.Ephemeral });
     }
     addItem(userId, 'bomba_fumaca', 1);
     updateSmokeBombTimer(userId);
-    return interaction.reply({ content: `✅ **SUCESSO!** Você resgatou uma **Bomba de Fumaça 💨**! Use-a com sabedoria.`, flags: MessageFlags.Ephemeral });
+    return interaction.reply({ content: `✅ **SUCESSO!** Você resgatou uma **Bomba de Fumaça 💨** gratuita! Use-a com sabedoria.`, flags: MessageFlags.Ephemeral });
   }
 
   const myCoins = getCoins(userId);
@@ -220,9 +233,29 @@ async function handleBoostInteraction(interaction) {
   } else if (choice === 'pe_coelho') {
     const { addItem } = require("./inventory");
     addItem(userId, 'pe_coelho', 1);
+  } else if (choice === 'bomba_fumaca') {
+    const { addItem } = require("./inventory");
+    addItem(userId, 'bomba_fumaca', 1);
   } else if (choice === 'acido_corrosivo') {
     const { addItem } = require("./inventory");
     addItem(userId, 'acido_corrosivo', 1);
+  } else if (choice === 'invocar_boss') {
+    // Spawna o boss em todos os canais de eventos
+    const { spawnWorldBoss } = require("./boss");
+    const { EVENT_CHANNELS, resetBossTimer } = require("./games");
+    
+    // Força o reset das 12h no games.js
+    if (resetBossTimer) resetBossTimer();
+
+    const bossChannels = [];
+    for (const channelId of EVENT_CHANNELS) {
+      const bossChannel = interaction.client.channels.cache.get(channelId);
+      if (bossChannel) bossChannels.push(bossChannel);
+    }
+    
+    if (bossChannels.length > 0) {
+      spawnWorldBoss(bossChannels);
+    }
   }
 
   // Responde efemeramente
@@ -237,6 +270,31 @@ async function handleBoostInteraction(interaction) {
     channel.send(`🚀 **ALERTA DE BOOST!** O(A) jogador(a) **${interaction.user.username}** acaba de ativar um **${boostConfig.label}**! O mercado de Nanacoins está aquecido!`);
   }
 }
+// Função helper para dar boost diretamente (usado no Fliperama)
+function giveBoost(userId, choice) {
+  const boostConfig = BOOST_PRICES[choice];
+  if (!boostConfig) return;
+
+  if (choice.startsWith('game_')) {
+    gameBoosts.set(userId, {
+      mult: boostConfig.mult,
+      expire: Date.now() + boostConfig.hours * 60 * 60 * 1000
+    });
+  } else if (choice.startsWith('steal_')) {
+    stealBoosts.set(userId, {
+      chanceExtra: boostConfig.chanceExtra,
+      expire: Date.now() + boostConfig.mins * 60 * 1000
+    });
+  } else if (choice === 'pe_cabra') {
+    peCabraBoosts.set(userId, Date.now() + boostConfig.mins * 60 * 1000);
+  } else if (choice === 'escudo_espinhos') {
+    escudoBoosts.set(userId, Date.now() + boostConfig.mins * 60 * 1000);
+  } else if (choice === 'pe_coelho' || choice === 'bomba_fumaca' || choice === 'acido_corrosivo' || choice === 'invocar_boss') {
+    const { addItem } = require("./inventory");
+    addItem(userId, choice, 1);
+  }
+}
+
 
 module.exports = {
   handleBoostCommand,
@@ -244,5 +302,6 @@ module.exports = {
   getGameMultiplier,
   getStealChanceExtra,
   hasPeCabra,
-  hasEscudoEspinhos
+  hasEscudoEspinhos,
+  giveBoost
 };

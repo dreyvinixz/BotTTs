@@ -963,9 +963,19 @@ function checkForcaGuess(message) {
 
 // ========== EVENTOS ALEATÓRIOS ==========
 
+const EVENT_CHANNELS = [
+  "1516293332966576129",
+  "1515798803972755587",
+  "1348716118981742592"
+];
+
 let lastEventTime = Date.now();
-let lastBossTime = Date.now();
-let activeEventMsgId = null;
+let lastBossTime = Date.now(); // Spawna naturalmente em 12h
+let activeEventMsgIds = new Set();
+
+function resetBossTimer() {
+  lastBossTime = Date.now();
+}
 
 async function checkAndSpawnEvent(message) {
   const now = Date.now();
@@ -981,40 +991,62 @@ async function checkAndSpawnEvent(message) {
         .setStyle(ButtonStyle.Success)
     );
 
-    const msg = await message.channel.send({
-      content: "🚨 **EVENTO ALEATÓRIO APARECEU!** 🚨\nO primeiro a clicar no botão ganha **200 Nanacoins 🪙**!",
-      components: [row]
-    });
-
-    activeEventMsgId = msg.id;
-
-    // O evento expira em 10 minutos se ninguém pegar
-    setTimeout(() => {
-      if (activeEventMsgId === msg.id) {
-        activeEventMsgId = null;
-        msg.edit({ content: "⏰ **EVENTO EXPIRADO!** Ninguém pegou o baú a tempo...", components: [] }).catch(() => null);
+    const messagesSent = [];
+    for (const channelId of EVENT_CHANNELS) {
+      const eventChannel = message.client.channels.cache.get(channelId) || await message.client.channels.fetch(channelId).catch(() => null);
+      if (eventChannel) {
+        try {
+          const msg = await eventChannel.send({
+            content: "@here 🚨 **EVENTO ALEATÓRIO APARECEU!** 🚨\nO primeiro a clicar no botão ganha **200 Nanacoins 🪙**!",
+            components: [row]
+          });
+          activeEventMsgIds.add(msg.id);
+          messagesSent.push(msg);
+        } catch (err) {
+          console.log(`⚠️ Falha ao spawnar evento no canal ${channelId}: ${err.message}`);
+        }
       }
-    }, 10 * 60 * 1000);
+    }
+
+    if (activeEventMsgIds.size > 0) {
+      setTimeout(() => {
+        messagesSent.forEach(msg => {
+          if (activeEventMsgIds.has(msg.id)) {
+            msg.edit({ content: "⏰ **EVENTO EXPIRADO!** Ninguém pegou o baú a tempo...", components: [] }).catch(() => null);
+          }
+        });
+        activeEventMsgIds.clear();
+      }, 10 * 60 * 1000);
+    }
   }
 
   // A cada 12 horas (World Boss)
   if (now - lastBossTime > 12 * 60 * 60 * 1000) {
     lastBossTime = now;
-    const { spawnWorldBoss } = require("./boss");
-    spawnWorldBoss(message.channel);
+    
+    const bossChannels = [];
+    for (const channelId of EVENT_CHANNELS) {
+      const bossChannel = message.client.channels.cache.get(channelId);
+      if (bossChannel) bossChannels.push(bossChannel);
+    }
+    
+    if (bossChannels.length > 0) {
+      const { spawnWorldBoss } = require("./boss");
+      spawnWorldBoss(bossChannels);
+    }
   }
 }
 
 async function handleEventInteraction(interaction) {
   if (!interaction.isButton() || interaction.customId !== "event_claim_btn") return false;
 
-  if (activeEventMsgId !== interaction.message.id) {
+  if (!activeEventMsgIds.has(interaction.message.id)) {
     await interaction.reply({ content: "Esse evento já foi reivindicado ou expirou!", flags: MessageFlags.Ephemeral });
     return true;
   }
 
   // Reivindica o prêmio
-  activeEventMsgId = null;
+  activeEventMsgIds.delete(interaction.message.id);
   addCoins(interaction.user.id, 200);
 
   await interaction.update({
@@ -1030,5 +1062,7 @@ module.exports = {
   handleForcaThemeInteraction,
   checkForcaGuess,
   checkAndSpawnEvent,
-  handleEventInteraction
+  handleEventInteraction,
+  EVENT_CHANNELS,
+  resetBossTimer
 };
