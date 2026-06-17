@@ -44,25 +44,25 @@ function buildHelpEmbed() {
     .setDescription('Aqui está a lista de tudo que eu posso fazer por você no servidor!\nExplore os comandos por categoria abaixo.')
     .addFields(
       { name: '💰 Economia & Loja', value: [
-        '`!daily` / `!diario` - 🎁 Gire a roleta diária para ganhar prêmios e itens!',
-        '`!saldo` / `!nanacoins` - 💵 Verifica quanto dinheiro virtual você tem.',
+        '`!daily` / `!diario` - 🎁 Gire a roleta diária para prêmios!',
+        '`!saldo` - 💵 Verifica quanto dinheiro virtual você tem.',
         '`!rank` - 🏆 Mostra os mais ricos do servidor.',
-        '`!doar <@user> <valor>` - 💸 Transfere Nanacoins para outro jogador.',
-        '`!loja` - 🏪 Abre loja de boosts, itens e armas.',
-        '`!bolsa` - 📈 Compra, vende e negocia itens/armas pela UI.',
-        '`!inventario` - 🎒 Mostra seus itens e armas.',
-        '`!equipar <id>` - ⚔️ Equipa uma arma.'
+        '`!doar <@user> <valor>` - 💸 Transfere Nanacoins simples.',
+        '`!loja` - 🏪 Abre o hub de boosts, itens e armas equipáveis.',
+        '`!bolsa` - 📈 Central de Negócios: compre, venda ou faça trade de itens/armas!',
+        '`!inventario` / `!inv` - 🎒 Mostra seus itens e armas.',
+        '`!equipar <id>` - ⚔️ Equipa uma arma para usar no Boss/Duelo/Roubo.'
       ].join('\n') },
       { name: '⚔️ Crime & Duelo', value: [
-        '`!roubar <@user>` - 🥷 Tenta furtar Nanacoins de alguém (50% de chance).',
-        '`!parrudo <horas>h` - 🛡️ Compra imunidade a roubos por X horas.',
-        '`!timeout` - 🚓 Verifica quanto tempo falta para sair da prisão.',
-        '`!fianca [@user]` - 💸 Paga 250 Nanacoins para sair ou libertar amigo da prisão.',
-        '`!beijarmuro` - 💋 Beija o muro e testa sua sorte (pode dar bom ou muito ruim).'
+        '`!roubar <@user>` - 🥷 Tenta furtar Nanacoins de alguém.',
+        '`!parrudo <horas>h` - 🛡️ Imunidade a roubos. Se atacado sem Ácido, o ladrão sofre dano do Escudo de Espinhos!',
+        '`!timeout` - 🚓 Verifica tempo de prisão.',
+        '`!fianca [@user]` - 💸 Paga fiança para sair ou soltar amigo.',
+        '`!beijarmuro` - 💋 Beija o muro e testa sua sorte.'
       ].join('\n') },
       { name: '🎮 Games & RPG', value: [
-        '`!games` - 🎰 Menu de minigames (Forca, Aventura, Trivia e Duelo).',
-        '`!fliperama` / `!lootbox` - 🎰 Novo Fliperama! Compre caixas misteriosas com prêmios.'
+        '`!games` - 🎰 Minigames (Forca e Trivia com novos temas, Duelos com armas).',
+        '`!fliperama` / `!lootbox` - 🎰 Compre caixas para ganhar armas épicas e itens raras!'
       ].join('\n') },
       { name: '🧠 IA & Utilidades', value: [
         '`!nana <texto>` - 💬 Conversa com a IA no modo casual/persona.',
@@ -79,27 +79,23 @@ function buildHelpEmbed() {
 function buildNewEmbed() {
   return new EmbedBuilder()
     .setColor('#00FF00') // Verde neon chamativo
-    .setTitle('🌟 NOVIDADES DO NANA V4.0 🌟')
-    .setDescription('O bot acabou de receber uma **atualização massiva** com chefões, roleta diária e um inventário de itens sujos! Confira o que mudou:')
+    .setTitle('🌟 NOVIDADES DA GRANDE REFORMA 🌟')
+    .setDescription('O servidor voltou! O bot foi reformulado com **Armas Equipáveis, Raid Bosses Dinâmicos e um Mercado Centralizado**. Confira o que mudou:')
     .addFields(
-      { name: '🐉 O Retorno do World Boss', value: 'A cada **12 horas**, um monstro épico gerado por IA invade os canais de evento! Todos podem atacar juntos para dividir uma recompensa absurda de **10.000 Nanacoins**!' },
-      { name: '📅 Roleta Diária (`!daily`)', value: 'Gire a roleta 1 vez por dia! Pode ganhar moedas, o grande Jackpot ou itens especiais.' },
-      { name: '🎰 O NOVO FLIPERAMA (`!fliperama`)', value: 'Gaste suas moedas em 3 Lootboxes diferentes (Bronze, Prata e Ouro). Cuidado com as armadilhas na Caixa de Ouro!' },
-      { name: '🎒 Novos Itens da Loja (`!loja`)', value: [
-        '💨 **Bomba de Fumaça:** Resgate a sua de graça ou pague 500 NC por novas! Foge da polícia e anula prisões.',
-        '👹 **Invocação de Boss:** Spawna instantaneamente o World Boss para todo mundo! (10k NC)',
-        '🧪 **Ácido Corrosivo:** 45% de chance de furar o escudo de um alvo durante roubos!',
-        '🐰 **Pé de Coelho:** Garante vitória máxima no Beijar o Muro.',
-        '🔧 **Pé de Cabra:** Roubos furtam de 40% a 80% da grana da vítima.',
-        '🛡️ **Escudo de Espinhos:** Puna quem tenta te roubar com 10% do dinheiro deles.'
+      { name: '🐉 Boss Raid Expandido', value: 'O World Boss e o novo **Mini Boss** (a cada 6h) agora têm **Fases de Vida**, ataques diferentes, fraquezas e resistências. Use sua arma para perfurar a defesa e ganhar prêmios imensos!' },
+      { name: '⚔️ Armas, Durabilidade e Duelos', value: 'Abra `!loja` para comprar ou tente a sorte no `!fliperama`! Armas comuns, raras, épicas e Lendárias. Use `!equipar` e detone no Boss, perfure a defesa nos Duelos ou aumente seus lucros em Roubos.' },
+      { name: '🎒 Nova Bolsa & Inventário', value: 'Comando `!bolsa` centraliza todas as transações! Venda seus itens e armas para outros jogadores, compre da comunidade ou faça "Trades" diretos com seus amigos através da nova UI! (Use `!inv` para ver suas coisas).' },
+      { name: '🛡️ Ajustes no Crime', value: [
+        '💸 **Escudo de Espinhos:** Agora o escudo pune o ladrão *imediatamente* na hora do roubo.',
+        '🧪 **Ácido:** Ainda fura o Parrudo de primeira se você tiver a poção.'
       ].join('\n') },
-      { name: '✨ Ajustes Rápidos', value: [
-        '💸 **Fiança Amiga (`!fianca @usuario`):** Agora você pode pagar a fiança de um amigo que rodou na polícia.',
-        '⏳ **Novo Balanceamento:** Os multiplicadores da loja (2x, 3x, 4x e Roubo) tiveram seus tempos reajustados para a nova economia.'
+      { name: '🎮 Melhorias de Jogo', value: [
+        '🔐 **Lock de Dono:** Só quem usa o comando `!games` pode escolher o tema ou configurar a Forca/Trivia. Nada de roubarem seu menu!',
+        '📚 **Novos Temas:** Forca e Show do Milhão ganharam **10 temas novos** e seleção de rodadas.'
       ].join('\n') }
     )
     .setImage('https://media.tenor.com/XqT7hS_m4_kAAAAC/hype-train.gif') // Gif chamativo de hype
-    .setFooter({ text: 'A economia está pegando fogo! Divirta-se e cuidado com as costas!' });
+    .setFooter({ text: 'Bem-vindos a nova era da Economia! Usem !help para ver os comandos.' });
 }
 
 async function sendChunkedReply(message, text) {
