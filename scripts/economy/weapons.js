@@ -141,26 +141,86 @@ async function handleEquipWeaponCommand(message, text) {
 
 async function handleInventoryCommand(message) {
   const inventory = getUserInventory(message.author.id);
+  const BOOST_PRICES = config.static.shop?.boosts || {};
+
+  function getItemDisplay(itemId) {
+    const b = BOOST_PRICES[itemId];
+    if (b) return `${b.emoji || '📦'} **${b.label || itemId}**`;
+    if (itemId === 'bomba_fumaca') return `💨 **Bomba de Fumaça**`;
+    if (itemId === 'peCabra') return `🔧 **Pé de Cabra**`;
+    if (itemId === 'escudoEspinhos') return `🛡️ **Escudo de Espinhos**`;
+    if (itemId === 'acido_corrosivo') return `🧪 **Ácido Corrosivo**`;
+    if (itemId === 'pe_de_coelho') return `🐰 **Pé de Coelho**`;
+    return `📦 **${itemId}**`;
+  }
+
+  const rarityEmojis = { comum: "⚪", raro: "🔵", epico: "🟣", lendario: "🟡" };
+
   const itemLines = Object.entries(inventory.items)
     .filter(([, amount]) => amount > 0)
-    .map(([itemId, amount]) => `• ${itemId}: x${amount}`);
+    .map(([itemId, amount]) => `> ${getItemDisplay(itemId)} \`x${amount}\``);
 
   const weaponLines = inventory.weapons.map((instance) => {
     const def = getWeaponDef(instance.weaponId);
-    const equipped = inventory.equippedWeaponId === instance.instanceId ? " [EQUIPADA]" : "";
-    const locked = instance.lockedUntil ? " [BOLSA]" : "";
-    return `• ${instance.instanceId}: ${def ? formatWeaponLabel({ ...instance, def }) : instance.weaponId}${equipped}${locked}`;
+    const equipped = inventory.equippedWeaponId === instance.instanceId ? " 🗡️ **[EQUIPADA]**" : "";
+    const locked = instance.lockedUntil ? " 🔒 **[BOLSA]**" : "";
+    const rEmoji = def ? (rarityEmojis[def.rarity] || "🔹") : "🔹";
+    const label = def ? formatWeaponLabel({ ...instance, def }) : instance.weaponId;
+    return `> ${rEmoji} \`${instance.instanceId}\` - **${label}**${equipped}${locked}`;
   });
+
+  const unequippedWeapons = inventory.weapons.filter(w => !w.lockedUntil && w.instanceId !== inventory.equippedWeaponId);
+  const components = [];
+
+  if (unequippedWeapons.length > 0) {
+    const { ActionRowBuilder, StringSelectMenuBuilder } = require("discord.js");
+    const row = new ActionRowBuilder().addComponents(
+      new StringSelectMenuBuilder()
+        .setCustomId(`inv_equip_${message.author?.id || message.user?.id}`)
+        .setPlaceholder("Escolha uma arma para equipar...")
+        .addOptions(unequippedWeapons.slice(0, 25).map((weapon) => {
+          const def = getWeaponDef(weapon.weaponId);
+          return {
+            label: (def ? formatWeaponLabel({ ...weapon, def }) : weapon.weaponId).slice(0, 100),
+            value: weapon.instanceId,
+            emoji: def ? (rarityEmojis[def.rarity] || "🔹") : "🔹"
+          };
+        }))
+    );
+    components.push(row);
+  }
 
   const embed = new EmbedBuilder()
     .setColor("#22C55E")
-    .setTitle(`🎒 Inventário de ${message.author.username}`)
+    .setTitle(`🎒 Inventário de ${message.author?.username || message.user?.username}`)
+    .setDescription("Aqui estão todos os seus pertences! Use o menu abaixo para equipar uma arma ou vá na `!bolsa` para vender.")
     .addFields(
-      { name: "Itens", value: itemLines.join("\n") || "Nenhum item.", inline: false },
-      { name: "Armas", value: weaponLines.slice(0, 15).join("\n") || "Nenhuma arma.", inline: false }
-    );
+      { name: "🧰 Itens & Consumíveis", value: itemLines.join("\n") || "> *Mochila vazia...*", inline: false },
+      { name: "⚔️ Arsenal de Armas", value: weaponLines.slice(0, 15).join("\n") || "> *Você não tem armas.*", inline: false }
+    )
+    .setFooter({ text: weaponLines.length > 15 ? "Mostrando apenas as 15 primeiras armas..." : "Guarde seus itens com segurança!" });
 
-  return message.reply({ embeds: [embed] });
+  const payload = { embeds: [embed], components, content: "" };
+  if (message.update) return message.update(payload);
+  return message.reply(payload);
+}
+
+async function handleInventoryInteraction(interaction) {
+  if (interaction.isStringSelectMenu() && interaction.customId.startsWith("inv_equip_")) {
+    const ownerId = interaction.customId.split("_")[2];
+    if (interaction.user.id !== ownerId) {
+      return interaction.reply({ content: "❌ Este inventário é de outro jogador. Digite `!inv` para abrir o seu.", flags: require("discord.js").MessageFlags.Ephemeral });
+    }
+    const instanceId = interaction.values[0];
+    if (!equipWeapon(ownerId, instanceId)) {
+      return interaction.reply({ content: "Não encontrei essa arma ou ela está travada na Bolsa.", flags: require("discord.js").MessageFlags.Ephemeral });
+    }
+    const weapon = getEquippedWeapon(ownerId);
+    await interaction.reply({ content: `✅ Arma equipada com sucesso: **${formatWeaponLabel(weapon)}**!`, flags: require("discord.js").MessageFlags.Ephemeral });
+    // Reload inventory UI
+    return handleInventoryCommand({ user: interaction.user, update: (p) => interaction.message.edit(p) });
+  }
+  return false;
 }
 
 module.exports = {
@@ -177,5 +237,6 @@ module.exports = {
   computeDuelWeaponModifier,
   formatWeaponLabel,
   handleEquipWeaponCommand,
-  handleInventoryCommand
+  handleInventoryCommand,
+  handleInventoryInteraction
 };

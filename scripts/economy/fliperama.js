@@ -78,7 +78,9 @@ async function handleFliperamaCommand(message) {
     .setDescription(`Bem-vindo ao Fliperama! Gaste suas Nanacoins para abrir as LootBoxes!\n\n${description}`)
     .setFooter({ text: "Apenas você pode clicar nestes botões." });
 
-  await message.reply({ embeds: [embed], components: [row] });
+  const payload = { embeds: [embed], components: [row] };
+  if (message.update) return message.update(payload);
+  await message.reply(payload);
 }
 
 async function handleFliperamaInteraction(interaction) {

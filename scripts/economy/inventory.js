@@ -23,6 +23,11 @@ function carregarInventario() {
 }
 
 const salvarInventario = createDebouncedJsonWriter(INVENTORY_PATH, () => db, config.static.app.timers.saveDebounceMs);
+const { writeJsonFileSync } = require("../core/storage");
+
+function salvarInventarioSync() {
+  writeJsonFileSync(INVENTORY_PATH, db);
+}
 
 function ensureUser(userId) {
   if (!db[userId]) {
@@ -136,6 +141,7 @@ function lockInventoryEntry(userId, entry) {
   if (entry.kind === "item") {
     if (!hasItem(userId, entry.itemId)) return false;
     removeItem(userId, entry.itemId, entry.amount || 1);
+    salvarInventarioSync();
     return true;
   }
   if (entry.kind === "weapon") {
@@ -143,7 +149,7 @@ function lockInventoryEntry(userId, entry) {
     if (!weapon) return false;
     weapon.lockedUntil = entry.lockedUntil || Date.now() + config.static.app.market.orderExpireMs;
     if (db[userId].equippedWeaponId === entry.instanceId) db[userId].equippedWeaponId = null;
-    salvarInventario();
+    salvarInventarioSync();
     return true;
   }
   return false;
@@ -153,13 +159,16 @@ function unlockInventoryEntry(userId, entry) {
   ensureUser(userId);
   if (entry.kind === "item") {
     addItem(userId, entry.itemId, entry.amount || 1);
+    salvarInventarioSync();
     return true;
   }
   if (entry.kind === "weapon") {
-    return !!updateWeaponInstance(userId, entry.instanceId, (weapon) => {
+    const success = !!updateWeaponInstance(userId, entry.instanceId, (weapon) => {
       delete weapon.lockedUntil;
       return weapon;
     });
+    if (success) salvarInventarioSync();
+    return success;
   }
   return false;
 }
@@ -169,6 +178,7 @@ function transferLockedEntry(fromUserId, toUserId, entry) {
   ensureUser(toUserId);
   if (entry.kind === "item") {
     addItem(toUserId, entry.itemId, entry.amount || 1);
+    salvarInventarioSync();
     return true;
   }
   if (entry.kind === "weapon") {
@@ -181,7 +191,7 @@ function transferLockedEntry(fromUserId, toUserId, entry) {
       db[fromUserId].equippedWeaponId = db[fromUserId].weapons[0]?.instanceId || null;
     }
     if (!db[toUserId].equippedWeaponId) db[toUserId].equippedWeaponId = weapon.instanceId;
-    salvarInventario();
+    salvarInventarioSync();
     return true;
   }
   return false;

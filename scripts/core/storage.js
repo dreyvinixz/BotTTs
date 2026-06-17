@@ -26,10 +26,17 @@ function createDebouncedJsonWriter(filePath, getValue, delayMs = 2000) {
   let isSaving = false;
 
   return function scheduleWrite() {
-    if (timeout) return;
+    // Always reset the timer so the latest state is always written
+    if (timeout) clearTimeout(timeout);
     timeout = setTimeout(async () => {
-      if (isSaving) return;
+      if (isSaving) {
+        // If a save is in progress, reschedule
+        timeout = null;
+        scheduleWrite();
+        return;
+      }
       isSaving = true;
+      timeout = null;
       try {
         ensureDir(path.dirname(filePath));
         await fsPromises.writeFile(filePath, JSON.stringify(getValue(), null, 2), "utf-8");
@@ -37,7 +44,6 @@ function createDebouncedJsonWriter(filePath, getValue, delayMs = 2000) {
         console.error(`Erro ao salvar JSON ${filePath}:`, err);
       } finally {
         isSaving = false;
-        timeout = null;
       }
     }, delayMs);
   };

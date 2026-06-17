@@ -114,18 +114,30 @@
     "world": {
       "id": "world",
       "name": "World Boss",
-      "hp": 10000,
+      "hp": 20000,
       "prize": 10000,
       "expireMs": 900000,
-      "prompt": "a giant fantasy monster, epic boss battle, digital art, masterpiece, high quality, highly detailed, dramatic lighting"
+      "prompt": [
+        "a giant fantasy monster, epic boss battle, digital art, masterpiece, high quality, highly detailed, dramatic lighting",
+        "a terrifying ancient dragon breathing fire, epic fantasy scene, digital illustration, sharp focus",
+        "a massive shadow behemoth emerging from the ground, glowing red eyes, dark fantasy, highly detailed",
+        "a colossal armored titan wielding a giant axe, intense battle scene, fantasy concept art, masterpiece",
+        "a gigantic spectral leviathan floating in the sky, ethereal lighting, epic fantasy art, 8k resolution"
+      ]
     },
     "mini": {
       "id": "mini",
       "name": "Mini Boss",
-      "hp": 5000,
+      "hp": 10000,
       "prize": 5000,
       "expireMs": 600000,
-      "prompt": "a dangerous fantasy mini boss, compact raid creature, digital art, high quality, dramatic lighting"
+      "prompt": [
+        "a dangerous fantasy mini boss, compact raid creature, digital art, high quality, dramatic lighting",
+        "a fierce mutated goblin chieftain, wielding a rusty blade, fantasy game art, sharp focus",
+        "a corrupt forest dryad corrupted by dark magic, glowing purple aura, fantasy concept art, high quality",
+        "a heavily armored skeleton knight with a glowing blue sword, dungeon setting, epic fantasy art",
+        "a vicious two-headed hellhound covered in chains, fiery background, digital illustration, highly detailed"
+      ]
     },
     "actions": {
       "basic": {

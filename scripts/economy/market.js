@@ -11,7 +11,7 @@ const {
   TextInputStyle
 } = require("discord.js");
 const config = require("../core/config");
-const { createDebouncedJsonWriter } = require("../core/storage");
+const { createDebouncedJsonWriter, writeJsonFileSync } = require("../core/storage");
 const { getCoins, addCoins, removeCoins, formatCoins } = require("./economy");
 const {
   getUserInventory,
@@ -59,8 +59,20 @@ function cleanupExpiredOrders() {
   if (changed) saveMarket();
 }
 
+const ITEM_LABELS = {
+  bomba_fumaca: "💨 Bomba de Fumaça",
+  peCabra: "🔧 Pé de Cabra",
+  escudoEspinhos: "🛡️ Escudo de Espinhos",
+  acido_corrosivo: "🧪 Ácido Corrosivo",
+  pe_coelho: "🐰 Pé de Coelho",
+  pe_de_coelho: "🐰 Pé de Coelho"
+};
+
 function describeEntry(entry) {
-  if (entry.kind === "item") return `${entry.itemId} x${entry.amount || 1}`;
+  if (entry.kind === "item") {
+    const label = ITEM_LABELS[entry.itemId] || entry.itemId;
+    return `${label} x${entry.amount || 1}`;
+  }
   const def = getWeaponDef(entry.weaponId);
   return def ? formatWeaponLabel({ ...entry, def }) : entry.weaponId;
 }
@@ -138,7 +150,8 @@ function createOrder(sellerId, entry, price) {
     expiresAt: lockedEntry.lockedUntil
   };
   db.orders.push(order);
-  saveMarket();
+  writeJsonFileSync(config.paths.market, db); // Immediate sync save for critical operation
+  saveMarket(); // Also schedule debounced save
   return { ok: true, order };
 }
 
@@ -171,6 +184,7 @@ function buyOrder(buyerId, orderId) {
     soldAt: order.soldAt
   });
   while (db.history.length > (marketConfig.historyLimit || 100)) db.history.shift();
+  writeJsonFileSync(config.paths.market, db); // Immediate sync save
   saveMarket();
   return { ok: true, order };
 }
@@ -268,23 +282,40 @@ function marketRows(ownerId) {
       new ButtonBuilder().setCustomId(`market_home_${ownerId}`).setLabel("Mercado").setStyle(ButtonStyle.Primary),
       new ButtonBuilder().setCustomId(`market_sell_${ownerId}`).setLabel("Vender").setStyle(ButtonStyle.Success),
       new ButtonBuilder().setCustomId(`market_buy_${ownerId}`).setLabel("Comprar").setStyle(ButtonStyle.Secondary),
-      new ButtonBuilder().setCustomId(`market_trade_${ownerId}`).setLabel("Trade").setStyle(ButtonStyle.Secondary),
-      new ButtonBuilder().setCustomId(`market_history_${ownerId}`).setLabel("Historico").setStyle(ButtonStyle.Secondary)
+      new ButtonBuilder().setCustomId(`market_trade_${ownerId}`).setLabel("Trade").setStyle(ButtonStyle.Secondary)
+    ),
+    new ActionRowBuilder().addComponents(
+      new ButtonBuilder().setCustomId(`market_history_${ownerId}`).setLabel("Historico").setStyle(ButtonStyle.Secondary),
+      new ButtonBuilder().setCustomId(`market_shop_${ownerId}`).setLabel("Voltar p/ Loja").setStyle(ButtonStyle.Danger)
     )
   ];
 }
 
 function ownerFromCustomId(customId) {
+  // market_home_OWNER, market_sell_OWNER, market_buy_OWNER, market_trade_OWNER, market_history_OWNER, market_shop_OWNER
+  // All of these have owner at index 2
   return customId.split("_")[2];
+}
+
+// Returns owner only for simple market_VERB_OWNER style customIds
+function simpleOwner(customId) {
+  const parts = customId.split("_");
+  // Simple pattern: market_VERB_OWNER  where VERB is single word
+  return parts[2];
 }
 
 async function handleMarketCommand(message) {
   const orders = getActiveOrders();
   const embed = new EmbedBuilder()
     .setColor("#38BDF8")
-    .setTitle("📈 Bolsa Nanacoin")
+    .setTitle("📈 Bolsa de Valores")
     .setDescription(orders.slice(0, 8).map((order) => `\`${order.id}\` - ${describeEntry(order.entry)} por **${formatCoins(order.price)} NC**`).join("\n") || "Nenhuma ordem ativa.");
-  return message.reply({ embeds: [embed], components: marketRows(message.author.id) });
+  
+  if (message.reply) {
+    return message.reply({ embeds: [embed], components: marketRows(message.author?.id || message.user?.id) });
+  } else if (message.update) {
+    return message.update({ content: "", embeds: [embed], components: marketRows(message.user.id) });
+  }
 }
 
 async function showSell(interaction, ownerId) {
@@ -350,6 +381,7 @@ async function handleMarketInteraction(interaction) {
   if (!interaction.customId?.startsWith("market_")) return false;
 
   if (interaction.isButton()) {
+    // IMPORTANT: check more-specific prefixes FIRST before generic ones
     if (interaction.customId.startsWith("market_sell_order_") || interaction.customId.startsWith("market_sell_system_")) {
       const parts = interaction.customId.split("_");
       const mode = parts[2];
@@ -367,7 +399,7 @@ async function handleMarketInteraction(interaction) {
       }
       if (mode === "system") {
         const result = systemSell(ownerId, entry);
-        await interaction.update({ content: result.ok ? `✅ Venda instantânea concluída por **${formatCoins(result.price)} NC**.` : `❌ ${result.reason}`, components: [] });
+        await interaction.update({ content: result.ok ? `✅ Venda instantânea concluída por **${formatCoins(result.price)} NC**.` : `❌ ${result.reason}`, embeds: [], components: [] });
         return true;
       }
 
@@ -386,7 +418,12 @@ async function handleMarketInteraction(interaction) {
     }
 
     const ownerId = ownerFromCustomId(interaction.customId);
-    if (interaction.user.id !== ownerId && !interaction.customId.startsWith("market_confirm_buy_")) {
+    if (
+      interaction.user.id !== ownerId &&
+      !interaction.customId.startsWith("market_confirm_buy_") &&
+      !interaction.customId.startsWith("market_confirm_trade_") &&
+      !interaction.customId.startsWith("market_reject_trade_")
+    ) {
       await interaction.reply({ content: "❌ Esta Bolsa foi aberta por outro jogador. Use `!bolsa` para abrir a sua.", flags: MessageFlags.Ephemeral });
       return true;
     }
@@ -412,11 +449,16 @@ async function handleMarketInteraction(interaction) {
       return true;
     }
 
-    if (interaction.customId.startsWith("market_home_")) return handleMarketCommand({ author: interaction.user, reply: (payload) => interaction.update(payload) });
+    if (interaction.customId.startsWith("market_home_")) return handleMarketCommand({ user: interaction.user, update: (payload) => interaction.update(payload) });
     if (interaction.customId.startsWith("market_sell_")) return showSell(interaction, ownerId);
     if (interaction.customId.startsWith("market_buy_")) return showBuy(interaction, ownerId);
     if (interaction.customId.startsWith("market_trade_")) return showTrade(interaction, ownerId);
     if (interaction.customId.startsWith("market_history_")) return showHistory(interaction, ownerId);
+    
+    if (interaction.customId.startsWith("market_shop_")) {
+      const { handleBoostCommand } = require("./boosts");
+      return handleBoostCommand({ user: interaction.user, update: (payload) => interaction.update(payload) });
+    }
   }
 
   if (interaction.isStringSelectMenu() && interaction.customId.startsWith("market_sell_pick_")) {
@@ -435,7 +477,22 @@ async function handleMarketInteraction(interaction) {
       new ButtonBuilder().setCustomId(`market_sell_order_${ownerId}_${entry.kind}_${ref}`).setLabel("Criar Ordem").setStyle(ButtonStyle.Success),
       new ButtonBuilder().setCustomId(`market_sell_system_${ownerId}_${entry.kind}_${ref}`).setLabel("Venda Instantânea").setStyle(ButtonStyle.Secondary)
     );
-    await interaction.reply({ content: `Vender **${entry.label}**. Preço sugerido: **${formatCoins(getSuggestedPrice(entry))} NC**.`, components: [row], flags: MessageFlags.Ephemeral });
+    const embed = new EmbedBuilder()
+      .setColor("#F59E0B")
+      .setTitle(`📤 Vender ${entry.label}`)
+      .setDescription(`Preço médio na Bolsa: **${formatCoins(getSuggestedPrice(entry))} NC**\n\nEscolha como deseja vender o seu item:`)
+      .addFields(
+        { 
+          name: "🛒 Criar Ordem (Bolsa de Valores)", 
+          value: "Você escolhe o preço e o item fica na Bolsa aguardando outro jogador comprar. O lucro é maior, mas pode demorar."
+        },
+        { 
+          name: "⚡ Venda Instantânea (Sistema)", 
+          value: `Venda agora mesmo para o Bot e receba o dinheiro na hora! Porém, o Bot compra por apenas **55%** do valor sugerido (aprox. **${formatCoins(Math.floor(getSuggestedPrice(entry) * (marketConfig.systemSellPercent || 0.55)))} NC**).` 
+        }
+      );
+
+    await interaction.reply({ embeds: [embed], components: [row], flags: MessageFlags.Ephemeral });
     return true;
   }
 

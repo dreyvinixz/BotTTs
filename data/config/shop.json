@@ -110,6 +110,14 @@
       "menuLabel": "Invocação de Boss",
       "description": "Spawna o World Boss instantaneamente em todos canais! - 10k",
       "emoji": "👹"
+    },
+    "invocar_miniboss": {
+      "type": "spawnMiniBoss",
+      "cost": 5000,
+      "label": "Invocação do Mini Boss",
+      "menuLabel": "Invocação de Mini Boss",
+      "description": "Spawna o Mini Boss instantaneamente em todos canais! - 5k",
+      "emoji": "👾"
     }
   },
   "menuOrder": [
@@ -124,6 +132,7 @@
     "pe_cabra",
     "escudo_espinhos",
     "acido_corrosivo",
+    "invocar_miniboss",
     "invocar_boss"
   ]
 }

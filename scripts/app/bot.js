@@ -50,8 +50,7 @@ function buildHelpEmbed() {
         '`!doar <@user> <valor>` - 💸 Transfere Nanacoins simples.',
         '`!loja` - 🏪 Abre o hub de boosts, itens e armas equipáveis.',
         '`!bolsa` - 📈 Central de Negócios: compre, venda ou faça trade de itens/armas!',
-        '`!inventario` / `!inv` - 🎒 Mostra seus itens e armas.',
-        '`!equipar <id>` - ⚔️ Equipa uma arma para usar no Boss/Duelo/Roubo.'
+        '`!inventario` / `!inv` - 🎒 Mostra seus itens e permite **equipar suas armas** interativamente.'
       ].join('\n') },
       { name: '⚔️ Crime & Duelo', value: [
         '`!roubar <@user>` - 🥷 Tenta furtar Nanacoins de alguém.',
@@ -61,8 +60,7 @@ function buildHelpEmbed() {
         '`!beijarmuro` - 💋 Beija o muro e testa sua sorte.'
       ].join('\n') },
       { name: '🎮 Games & RPG', value: [
-        '`!games` - 🎰 Minigames (Forca e Trivia com novos temas, Duelos com armas).',
-        '`!fliperama` / `!lootbox` - 🎰 Compre caixas para ganhar armas épicas e itens raras!'
+        '`!games` - 🎰 Hub central de jogos: Forca, Trivia, Duelo e **Lootboxes**!'
       ].join('\n') },
       { name: '🧠 IA & Utilidades', value: [
         '`!nana <texto>` - 💬 Conversa com a IA no modo casual/persona.',
@@ -82,12 +80,12 @@ function buildNewEmbed() {
     .setTitle('🌟 NOVIDADES DA GRANDE REFORMA 🌟')
     .setDescription('O servidor voltou! O bot foi reformulado com **Armas Equipáveis, Raid Bosses Dinâmicos e um Mercado Centralizado**. Confira o que mudou:')
     .addFields(
-      { name: '🐉 Boss Raid Expandido', value: 'O World Boss e o novo **Mini Boss** (a cada 6h) agora têm **Fases de Vida**, ataques diferentes, fraquezas e resistências. Use sua arma para perfurar a defesa e ganhar prêmios imensos!' },
-      { name: '⚔️ Armas, Durabilidade e Duelos', value: 'Abra `!loja` para comprar ou tente a sorte no `!fliperama`! Armas comuns, raras, épicas e Lendárias. Use `!equipar` e detone no Boss, perfure a defesa nos Duelos ou aumente seus lucros em Roubos.' },
-      { name: '🎒 Nova Bolsa & Inventário', value: 'Comando `!bolsa` centraliza todas as transações! Venda seus itens e armas para outros jogadores, compre da comunidade ou faça "Trades" diretos com seus amigos através da nova UI! (Use `!inv` para ver suas coisas).' },
+      { name: '🐉 Boss Raid Dinâmico', value: 'O World Boss e o **Mini Boss** agora têm **Fases de Vida**, ataques, fraquezas e HP randomizado! Os visuais deles (imagens de IA) mudam a cada invocação. Use sua arma para perfurar a defesa e ganhar prêmios imensos!' },
+      { name: '⚔️ Loja & Inventário 2.0', value: 'As Lootboxes foram movidas para dentro de `!games` e as armas são equipadas diretamente por botões em `!inv`. A `!loja` agora conta com UI completa com emojis de raridade para cada arma!' },
+      { name: '🎒 Nova Bolsa & Transações', value: 'Comando `!bolsa` centraliza tudo! Venda seus itens e armas, compre da comunidade ou faça "Trades". Se quiser dinheiro rápido, faça a **Venda Instantânea** por 55% do valor do item direto pro bot.' },
       { name: '🛡️ Ajustes no Crime', value: [
-        '💸 **Escudo de Espinhos:** Agora o escudo pune o ladrão *imediatamente* na hora do roubo.',
-        '🧪 **Ácido:** Ainda fura o Parrudo de primeira se você tiver a poção.'
+        '💸 **Escudo de Espinhos:** Pune o ladrão *imediatamente* na hora do roubo.',
+        '🧪 **Ácido:** Fura o Parrudo de primeira se você tiver a poção.'
       ].join('\n') },
       { name: '🎮 Melhorias de Jogo', value: [
         '🔐 **Lock de Dono:** Só quem usa o comando `!games` pode escolher o tema ou configurar a Forca/Trivia. Nada de roubarem seu menu!',
@@ -430,6 +428,9 @@ function start() {
         await handleBoostInteraction(interaction);
         return;
       }
+
+      const { handleInventoryInteraction } = require("../economy/weapons");
+      if (await handleInventoryInteraction(interaction)) return;
 
       const { handleBossInteraction } = require("../games/boss");
       if (await handleBossInteraction(interaction)) return;

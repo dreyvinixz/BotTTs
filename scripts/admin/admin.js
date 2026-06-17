@@ -42,9 +42,34 @@ async function handleSpawnBossCommand(message) {
   return true;
 }
 
+async function handleSpawnMiniBossCommand(message) {
+  if (!(await requireSuperAdmin(message))) return true;
+
+  const { spawnMiniBoss } = require("../games/boss");
+  const { EVENT_CHANNELS } = require("../games/forca");
+
+  const bossChannels = [];
+  for (const channelId of EVENT_CHANNELS) {
+    const bossChannel = message.client.channels.cache.get(channelId)
+      || await message.client.channels.fetch(channelId).catch(() => null);
+    if (bossChannel) bossChannels.push(bossChannel);
+  }
+
+  if (bossChannels.length > 0) {
+    await spawnMiniBoss(bossChannels);
+    await message.reply("✅ Mini Boss sumonado com sucesso nos canais de evento!");
+  } else {
+    await message.reply("❌ Não foi possível encontrar os canais de evento.");
+  }
+  return true;
+}
+
 async function handleAdminCommand(message) {
   if (message.content.trim().toLowerCase().startsWith("!spawn_boss")) {
     return handleSpawnBossCommand(message);
+  }
+  if (message.content.trim().toLowerCase().startsWith("!spawn_miniboss") || message.content.trim().toLowerCase().startsWith("!spawn_mini")) {
+    return handleSpawnMiniBossCommand(message);
   }
   return false;
 }

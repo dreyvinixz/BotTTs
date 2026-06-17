@@ -57,8 +57,14 @@ function renderBossContent(boss) {
 async function createBossImage(typeConfig) {
   try {
     await assertForgeReady();
+    
+    const promptConfig = typeConfig.prompt;
+    const finalPrompt = Array.isArray(promptConfig) 
+      ? promptConfig[Math.floor(Math.random() * promptConfig.length)] 
+      : promptConfig;
+
     const payload = {
-      prompt: typeConfig.prompt,
+      prompt: finalPrompt,
       negative_prompt: config.FORGE_REALISTIC_NEGATIVE_PROMPT + ", people, text, watermark",
       steps: 20,
       cfg_scale: 7.5,
@@ -89,6 +95,9 @@ async function createBossImage(typeConfig) {
 async function spawnBoss(channels, type = "world") {
   const typeConfig = getBossTypeConfig(type);
   const attachment = await createBossImage(typeConfig);
+  
+  const baseHp = typeConfig.hp || 10000;
+  const randomHp = Math.floor(Math.random() * (baseHp + 1)) + baseHp;
 
   for (const channel of channels) {
     if (!channel) continue;
@@ -97,8 +106,8 @@ async function spawnBoss(channels, type = "world") {
         type,
         name: typeConfig.name,
         mention: type === "world" ? "@here" : "",
-        hp: typeConfig.hp,
-        maxHp: typeConfig.hp,
+        hp: randomHp,
+        maxHp: randomHp,
         prize: typeConfig.prize,
         expireMs: typeConfig.expireMs,
         damageDealt: new Map(),

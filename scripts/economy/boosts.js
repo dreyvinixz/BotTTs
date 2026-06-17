@@ -81,7 +81,7 @@ function shopButtons(ownerId) {
       new ButtonBuilder().setCustomId(`shop_cat_items_${ownerId}`).setLabel("Itens").setStyle(ButtonStyle.Secondary),
       new ButtonBuilder().setCustomId(`shop_cat_weapons_${ownerId}`).setLabel("Armas").setStyle(ButtonStyle.Danger),
       new ButtonBuilder().setCustomId(`shop_cat_legendary_${ownerId}`).setLabel("Lendarias").setStyle(ButtonStyle.Success),
-      new ButtonBuilder().setCustomId(`shop_cat_market_${ownerId}`).setLabel("Bolsa").setStyle(ButtonStyle.Secondary)
+      new ButtonBuilder().setCustomId(`shop_cat_market_${ownerId}`).setLabel("Bolsa de Valores").setStyle(ButtonStyle.Secondary)
     )
   ];
 }
@@ -90,8 +90,8 @@ function boostOptions(category) {
   return BOOST_MENU_ORDER
     .filter((key) => {
       const item = BOOST_PRICES[key];
-      if (category === "items") return ["item", "freeItem", "spawnBoss"].includes(item.type);
-      if (category === "boosts") return !["item", "freeItem", "spawnBoss"].includes(item.type);
+      if (category === "items") return ["item", "freeItem", "spawnBoss", "spawnMiniBoss"].includes(item.type);
+      if (category === "boosts") return !["item", "freeItem", "spawnBoss", "spawnMiniBoss"].includes(item.type);
       return true;
     })
     .map((key) => {
@@ -121,6 +121,8 @@ function buildWeaponSelect(ownerId, rarity = "all") {
     rarity: rarity === "all" ? undefined : rarity
   }).slice(0, 25);
 
+  const rarityEmojis = { comum: "⚪", raro: "🔵", epico: "🟣", lendario: "🟡" };
+
   return new ActionRowBuilder().addComponents(
     new StringSelectMenuBuilder()
       .setCustomId(`weapon_select_${ownerId}`)
@@ -128,17 +130,22 @@ function buildWeaponSelect(ownerId, rarity = "all") {
       .addOptions(weapons.map((weapon) => ({
         label: `${weapon.name} (${weapon.rarity})`.slice(0, 100),
         description: `${formatCoins(weapon.basePrice)} NC | ${weapon.durability} usos | Dano boss +${weapon.bossDamage}`.slice(0, 100),
-        value: weapon.id
+        value: weapon.id,
+        emoji: rarityEmojis[weapon.rarity] || "🔹"
       })))
   );
 }
 
 // Handler do comando !boost
 async function handleBoostCommand(message) {
-  await message.reply({
+  const payload = {
     content: "🏪 **MERCADO NANACOIN**\nEscolha uma categoria. Armas compradas aqui entram no seu inventário e podem ser equipadas com `!equipar <id>`.",
-    components: shopButtons(message.author.id)
-  });
+    embeds: [],
+    components: shopButtons(message.author?.id || message.user?.id)
+  };
+  
+  if (message.update) return message.update(payload);
+  return message.reply(payload);
 }
 
 async function showShopCategory(interaction, category) {
@@ -148,18 +155,41 @@ async function showShopCategory(interaction, category) {
   }
 
   if (category === "market") {
-    return interaction.reply({ content: "📈 A Bolsa agora fica centralizada em `!bolsa`.", flags: MessageFlags.Ephemeral });
+    const { handleMarketCommand } = require("./market");
+    return handleMarketCommand({ user: interaction.user, update: (payload) => interaction.update(payload) });
   }
 
+  const { EmbedBuilder } = require("discord.js");
+  
   if (category === "weapons" || category === "legendary") {
+    const isLegendary = category === "legendary";
+    const embed = new EmbedBuilder()
+      .setColor(isLegendary ? "#EAB308" : "#EF4444")
+      .setTitle(isLegendary ? "🟡 Forja de Armas Lendárias" : "⚔️ Arsenal de Armas")
+      .setDescription(isLegendary 
+        ? "Armas extremamente raras com habilidades passivas únicas! Escolha com sabedoria." 
+        : "Melhore seu poder de combate nas Raids e Duelos equipando novas armas do arsenal.")
+      .setFooter({ text: "Use o menu abaixo para visualizar os detalhes e comprar." });
+
     return interaction.update({
-      content: category === "legendary" ? "🟡 **ARMAS LENDÁRIAS**" : "⚔️ **LOJA DE ARMAS**",
-      components: [buildWeaponSelect(ownerId, category === "legendary" ? "lendario" : "all"), ...shopButtons(ownerId)]
+      content: "",
+      embeds: [embed],
+      components: [buildWeaponSelect(ownerId, isLegendary ? "lendario" : "all"), ...shopButtons(ownerId)]
     });
   }
 
+  const isItems = category === "items";
+  const embed = new EmbedBuilder()
+    .setColor(isItems ? "#3B82F6" : "#8B5CF6")
+    .setTitle(isItems ? "🎒 Suprimentos e Consumíveis" : "🚀 Mercado de Boosts")
+    .setDescription(isItems
+      ? "Itens de uso único que podem te salvar de prisões, castigos ou furar as defesas inimigas!"
+      : "Multiplique seus ganhos, aumente suas chances de roubo e compre proteções temporárias.")
+    .setFooter({ text: "Selecione um item no menu abaixo para comprar." });
+
   return interaction.update({
-    content: category === "items" ? "🎒 **ITENS DA LOJA**" : "🚀 **BOOSTS DA LOJA**",
+    content: "",
+    embeds: [embed],
     components: [buildBoostSelect(ownerId, category), ...shopButtons(ownerId)]
   });
 }
@@ -242,15 +272,19 @@ async function handleBoostInteraction(interaction) {
   } else if (boostConfig.type === 'item') {
     const { addItem } = require("./inventory");
     addItem(userId, choice, 1);
-  } else if (boostConfig.type === 'spawnBoss') {
-    // Spawna o boss apenas neste canal
-    const { spawnWorldBoss } = require("../games/boss");
+  } else if (boostConfig.type === 'spawnBoss' || boostConfig.type === 'spawnMiniBoss') {
+    const { spawnWorldBoss, spawnMiniBoss } = require("../games/boss");
     const { resetBossTimer } = require("../games/forca");
     
-    // Força o reset das 12h no games.js
-    if (resetBossTimer) resetBossTimer();
+    // Força o reset das 12h no games.js se for o World Boss principal
+    if (boostConfig.type === 'spawnBoss' && resetBossTimer) resetBossTimer();
 
-    spawnWorldBoss([interaction.channel]);
+    // Spawna apenas no canal em que a compra foi efetuada
+    if (boostConfig.type === 'spawnBoss') {
+      spawnWorldBoss([interaction.channel]);
+    } else {
+      spawnMiniBoss([interaction.channel]);
+    }
   }
 
   // Responde efemeramente
@@ -284,7 +318,7 @@ function giveBoost(userId, choice) {
     peCabraBoosts.set(userId, Date.now() + boostConfig.durationMs);
   } else if (boostConfig.type === 'buff' && boostConfig.buff === 'escudoEspinhos') {
     escudoBoosts.set(userId, Date.now() + boostConfig.durationMs);
-  } else if (boostConfig.type === 'item' || boostConfig.type === 'spawnBoss') {
+  } else if (boostConfig.type === 'item' || boostConfig.type === 'spawnBoss' || boostConfig.type === 'spawnMiniBoss') {
     const { addItem } = require("./inventory");
     addItem(userId, choice, 1);
   }
