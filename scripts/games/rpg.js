@@ -2,7 +2,6 @@ const { ActionRowBuilder, ButtonBuilder, ButtonStyle, ModalBuilder, TextInputBui
 const config = require("../core/config");
 const { getCoins, addCoins, removeCoins } = require("../economy/economy");
 const { getGameMultiplier } = require("../economy/boosts");
-const { pedirRespostaAoOllama, limparResposta } = require("../ai/ollama");
 const { gerarImagemNoForge } = require("../ai/image");
 const { traduzirParaIngles } = require("../core/utils");
 const { getPerguntaAleatoria } = require("./quizbank");
@@ -495,53 +494,14 @@ async function iniciarModoEnigma(channelId, channel, themeObj, diffObj, themeKey
     let pergunta, promptImg, verdadeira, f1, f2, f3;
 
     if (bancoQ) {
-      // Usa pergunta do banco (rápido, confiável, sem dependência do Ollama)
+      // Usa pergunta do banco (rápido e confiável)
       pergunta = bancoQ.p;
       promptImg = bancoQ.img;
       verdadeira = bancoQ.v;
       [f1, f2, f3] = bancoQ.f;
       console.log(`📋 [ShowDoMilhão] Usando pergunta do banco: "${pergunta}"`);
     } else {
-      // Fallback: gera com Ollama se o banco não tiver perguntas para essa combinação
-      console.log(`🤖 [ShowDoMilhão] Banco vazio para ${themeKey}/${diffKey}, usando Ollama...`);
-      const promptOllama = `
-Você é o apresentador de um jogo de conhecimentos gerais estilo Show do Milhão.
-Diretriz de Tema: ${themeObj.promptMod}
-Dificuldade solicitada: ${diffObj.promptMod}
-Me retorne EXATAMENTE neste formato de 6 linhas e mais nada:
-
-PERGUNTA: [O texto da pergunta em português (máximo 15 palavras)]
-PROMPT_IMAGEM: [Prompt em INGLÊS detalhado para o Stable Diffusion gerar uma ilustração visual. NÃO inclua texto. Apenas arte ou cenários. NÃO gere pessoas ou rostos.]
-VERDADEIRA: [1 resposta correta CURTA (máximo 5 palavras). NÃO inclua explicações, parênteses ou justificativas. Apenas o termo ou número.]
-FALSA_1: [1 resposta incorreta CURTA. Sem parênteses.]
-FALSA_2: [1 resposta incorreta CURTA. Sem parênteses.]
-FALSA_3: [1 resposta incorreta CURTA. Sem parênteses.]
-      `.trim();
-
-      const resposta = await pedirRespostaAoOllama(
-        [{ role: "user", content: promptOllama }],
-        { usarPoliticasDono: false, generationOptions: { num_predict: 400 } }
-      );
-      const resLimpa = limparResposta(resposta);
-
-      const pMatch = resLimpa.match(/PERGUNTA:\s*([^\n]+)/i);
-      const pImgMatch = resLimpa.match(/PROMPT_IMAGE[MN]?:\s*([^\n]+)/i);
-      const vMatch = resLimpa.match(/VERDADEIR[A-Z_]*:\s*([^\n]+)/i);
-      const f1Match = resLimpa.match(/FAL[A-Z_]*1:\s*([^\n]+)/i);
-      const f2Match = resLimpa.match(/FAL[A-Z_]*2:\s*([^\n]+)/i);
-      const f3Match = resLimpa.match(/FAL[A-Z_]*3:\s*([^\n]+)/i);
-
-      pergunta = pMatch ? pMatch[1].trim() : "";
-      promptImg = pImgMatch ? pImgMatch[1].trim() : "";
-      verdadeira = vMatch ? vMatch[1].replace(/\s*\(.*?\)/g, '').trim() : "";
-      f1 = f1Match ? f1Match[1].replace(/\s*\(.*?\)/g, '').trim() : "";
-      f2 = f2Match ? f2Match[1].replace(/\s*\(.*?\)/g, '').trim() : "";
-      f3 = f3Match ? f3Match[1].replace(/\s*\(.*?\)/g, '').trim() : "";
-
-      if (!pergunta || !promptImg || !verdadeira || !f1 || !f2 || !f3) {
-        console.log("Raw LLM:", resposta);
-        throw new Error("A IA não seguiu a formatação exigida.");
-      }
+      throw new Error("BANCO_VAZIO");
     }
 
     const msg = await channel.send("🎨 Preparando a pergunta e gerando a dica visual...");
@@ -657,8 +617,12 @@ FALSA_3: [1 resposta incorreta CURTA. Sem parênteses.]
     }, (triviaData.answerSeconds || 45) * 1000);
 
   } catch (err) {
-    console.error("Erro no Enigma:", err);
-    channel.send("A IA alucinou forte demais e o portal do enigma quebrou. Tentem novamente.");
+    if (err.message === "BANCO_VAZIO") {
+      channel.send(`📭 O banco de perguntas para o tema **${themeObj.name}** na dificuldade **${diffObj.name}** está vazio ou esgotado! Joguem em outro tema/dificuldade ou adicionem mais na configuração.`);
+    } else {
+      console.error("Erro no Enigma:", err);
+      channel.send("Um erro desconhecido quebrou o portal do enigma. Tentem novamente.");
+    }
     activeAventuras.delete(channelId);
   }
 }

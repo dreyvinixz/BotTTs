@@ -467,15 +467,26 @@ function simpleOwner(customId) {
 
 async function handleMarketCommand(message) {
   const orders = getActiveOrders();
-  const embed = new EmbedBuilder()
-    .setColor("#38BDF8")
-    .setTitle("📈 Bolsa de Valores")
-    .setDescription(orders.slice(0, 8).map((order) => `\`${order.id}\` - ${describeEntry(order.entry)} por **${formatCoins(order.price)} NC**`).join("\n") || "Nenhuma ordem ativa.");
+  const ownerId = message.author?.id || message.user?.id;
+  
+  let embed;
+  if (orders.length === 0) {
+    embed = new EmbedBuilder()
+      .setColor("#38BDF8")
+      .setTitle("📈 Bolsa de Valores")
+      .setDescription("📭 Nenhuma ordem ativa na Bolsa no momento.");
+  } else {
+    const lines = orders.slice(0, 30).map((order) => `\`${order.id}\` — **${describeEntry(order.entry)}**\n💰 Valor: **${formatCoins(order.price)} NC** | 👤 Vendedor: <@${order.sellerId}>`);
+    embed = new EmbedBuilder()
+      .setColor("#FBBF24")
+      .setTitle("📋 Murais de Anúncios da Bolsa")
+      .setDescription(lines.join("\n\n"));
+  }
   
   if (message.reply) {
-    return message.reply({ embeds: [embed], components: marketRows(message.author?.id || message.user?.id) });
+    return message.reply({ embeds: [embed], components: marketRows(ownerId) });
   } else if (message.update) {
-    return message.update({ content: "", embeds: [embed], components: marketRows(message.user.id) });
+    return message.update({ content: "", embeds: [embed], components: marketRows(ownerId) });
   }
 }
 

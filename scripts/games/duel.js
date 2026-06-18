@@ -21,6 +21,7 @@ const prisonMap = new Map();
 const parrudoMap = new Map();
 const beijoCooldowns = new Map();
 const robFailures = new Map();
+const rouboCooldowns = new Map();
 
 function carregarTimers() {
   try {
@@ -131,6 +132,30 @@ async function handleRoubarCommand(message, text) {
 
   if (targetUser.bot) {
     return message.reply("Você não pode roubar bots. Nós somos programados para chamar a polícia cibernética.");
+  }
+
+  if (!isSuperAdmin(userId)) {
+    const now = Date.now();
+    let data = rouboCooldowns.get(userId) || { count: 0, resetAt: now, blockedUntil: 0 };
+
+    if (now < data.blockedUntil) {
+      const remaining = data.blockedUntil - now;
+      return message.reply(`⏳ Calma aí! Você excedeu o limite de tentativas de roubo. Espere mais **${Math.ceil(remaining / 1000)} segundos**.`);
+    }
+
+    if (now > data.resetAt) {
+      data.count = 0;
+    }
+
+    data.count++;
+    data.resetAt = now + 60000; // janela de 1 minuto para resetar o combo
+
+    if (data.count >= 5) {
+      data.blockedUntil = now + 60000; // 1 minuto de timeout após 5 roubos
+      data.count = 0;
+    }
+
+    rouboCooldowns.set(userId, data);
   }
 
   if (isParrudo(targetUser.id)) {

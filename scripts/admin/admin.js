@@ -31,9 +31,9 @@ async function handleSpawnBossCommand(message) {
   if (bossChannels.length > 0) {
     await spawnWorldBoss(bossChannels);
     const targetText = message.client.botTtsTestMode ? "no canal de teste" : "em todos os canais de evento";
-    await message.reply(`✅ World Boss sumonado com sucesso ${targetText}! O contador de 12h foi resetado.`);
+    await message.reply(`✅ World Boss sumonado com sucesso ${targetText}! O contador de 12h foi resetado.`).catch(() => message.channel.send(`✅ World Boss sumonado com sucesso ${targetText}! O contador de 12h foi resetado.`).catch(() => null));
   } else {
-    await message.reply("❌ Não foi possível encontrar os canais de evento.");
+    await message.reply("❌ Não foi possível encontrar os canais de evento.").catch(() => null);
   }
   return true;
 }
@@ -49,9 +49,9 @@ async function handleSpawnMiniBossCommand(message) {
   if (bossChannels.length > 0) {
     await spawnMiniBoss(bossChannels);
     const targetText = message.client.botTtsTestMode ? "no canal de teste" : "nos canais de evento";
-    await message.reply(`✅ Mini Boss sumonado com sucesso ${targetText}!`);
+    await message.reply(`✅ Mini Boss sumonado com sucesso ${targetText}!`).catch(() => message.channel.send(`✅ Mini Boss sumonado com sucesso ${targetText}!`).catch(() => null));
   } else {
-    await message.reply("❌ Não foi possível encontrar os canais de evento.");
+    await message.reply("❌ Não foi possível encontrar os canais de evento.").catch(() => null);
   }
   return true;
 }

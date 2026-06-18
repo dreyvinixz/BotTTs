@@ -605,8 +605,9 @@ async function sendRaidResult(raid, client = null) {
 
 function raidPanelRows(guildId) {
   const activeRaid = findActiveRaidForGuild(guildId);
-  if (activeRaid?.status === "active" && activeRaid.defenderGuildId === String(guildId)) {
-    return raidDefenseRows();
+  if (activeRaid?.status === "active") {
+    if (activeRaid.defenderGuildId === String(guildId)) return raidDefenseRows();
+    if (activeRaid.attackerGuildId === String(guildId)) return raidAttackRows();
   }
   return [
     new ActionRowBuilder().addComponents(
@@ -627,6 +628,16 @@ function raidDefenseRows() {
     new ActionRowBuilder().addComponents(
       new ButtonBuilder().setCustomId("raid_defend").setLabel("Proteger").setEmoji("🛡️").setStyle(ButtonStyle.Primary),
       new ButtonBuilder().setCustomId("raid_use_item").setLabel("Usar Item Defensivo").setEmoji("🎒").setStyle(ButtonStyle.Secondary),
+      new ButtonBuilder().setCustomId("raid_shop").setLabel("Loja de Raid").setEmoji("🛒").setStyle(ButtonStyle.Success),
+      new ButtonBuilder().setCustomId("raid_status").setLabel("Ver Status").setEmoji("📊").setStyle(ButtonStyle.Secondary)
+    )
+  ];
+}
+
+function raidAttackRows() {
+  return [
+    new ActionRowBuilder().addComponents(
+      new ButtonBuilder().setCustomId("raid_use_item").setLabel("Usar Item Ofensivo").setEmoji("🎒").setStyle(ButtonStyle.Danger),
       new ButtonBuilder().setCustomId("raid_shop").setLabel("Loja de Raid").setEmoji("🛒").setStyle(ButtonStyle.Success),
       new ButtonBuilder().setCustomId("raid_status").setLabel("Ver Status").setEmoji("📊").setStyle(ButtonStyle.Secondary)
     )
@@ -755,7 +766,7 @@ function buildHistoryPayload(guildId) {
   return { embeds: [new EmbedBuilder().setColor("#64748B").setTitle("📜 Histórico de Raid").setDescription(lines)], components: raidPanelRows(guildId), content: "" };
 }
 
-async function showRaidLobbyMessage(message, raid) {
+function buildRaidLobbyPayload(raid) {
   const content = `⚔️ **Raid sendo preparada!**\n\nAlvo: **${raid.defenderName}**\nPote inicial: **${formatCoins(raid.stake)} NC**\nParticipantes: **${raid.participants.length}**\nTempo para iniciar: **${Math.ceil((raid.startsAt - now()) / 60000)} min**\n\nParticipando:\n${raid.participants.map((id) => `<@${id}>`).join("\n")}`;
   const rows = [
     new ActionRowBuilder().addComponents(
@@ -766,7 +777,11 @@ async function showRaidLobbyMessage(message, raid) {
       new ButtonBuilder().setCustomId("raid_shop").setLabel("Loja").setEmoji("🛒").setStyle(ButtonStyle.Primary)
     )
   ];
-  return message.reply({ content, components: rows });
+  return { content, components: rows };
+}
+
+async function showRaidLobbyMessage(message, raid) {
+  return message.reply(buildRaidLobbyPayload(raid));
 }
 
 async function handleRaidCommand(message, text = "") {
@@ -875,13 +890,27 @@ async function handleRaidInteraction(interaction) {
       if (action === "leave") result = leaveRaid(interaction.user.id, raidId);
       if (action === "cancel") result = cancelRaid(interaction.user.id, raidId);
       if (action === "startnow") result = await startRaid(interaction.user.id, raidId, interaction.client);
+      if (!result.ok) {
+        return interaction.reply({ content: `❌ ${result.reason}`, flags: MessageFlags.Ephemeral });
+      }
+      
+      if (action === "cancel") {
+        return interaction.update({ content: "Raid cancelada.", components: [] });
+      }
+      if (action === "startnow") {
+        return interaction.update({ content: "Raid iniciada com sucesso!", components: [] });
+      }
+      
+      const raid = raidDb.raids[raidId];
+      if (raid) {
+        return interaction.update(buildRaidLobbyPayload(raid));
+      }
+      
       const okText = {
         join: "Você entrou na Raid.",
-        leave: "Você saiu da Raid.",
-        cancel: "Raid cancelada.",
-        startnow: "Raid iniciada."
+        leave: "Você saiu da Raid."
       }[action];
-      return interaction.reply({ content: result.ok ? `✅ ${okText}` : `❌ ${result.reason}`, flags: MessageFlags.Ephemeral });
+      return interaction.update({ content: `✅ ${okText}` });
     }
   }
 

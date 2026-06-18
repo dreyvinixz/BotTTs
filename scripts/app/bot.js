@@ -44,24 +44,24 @@ function buildHelpEmbed() {
     .setTitle('🤖 Comandos do Nana 🍌')
     .setDescription('Aqui está a lista de tudo que eu posso fazer por você no servidor!\nExplore os comandos por categoria abaixo.')
     .addFields(
-      { name: '💰 Economia & Loja', value: [
+      { name: '💰 Economia, Mercado & Forja', value: [
         '`!daily` / `!diario` - 🎁 Gire a roleta diária para prêmios!',
         '`!saldo` - 💵 Verifica quanto dinheiro virtual você tem.',
         '`!rank` - 🏆 Mostra os mais ricos do servidor.',
         '`!doar <@user> <valor>` - 💸 Transfere Nanacoins simples.',
-        '`!loja` - 🏪 Abre o hub de boosts, itens e armas equipáveis.',
-        '`!bolsa` - 📈 Central de Negócios: compre, venda ou faça trade de itens/armas!',
+        '`!loja` - 🏪 Loja Oficial com **estoque virtual** e preços dinâmicos.',
+        '`!bolsa` - 📈 Bolsa de Valores real: compre, venda e lucre com especulação!',
         '`!raid` - ⚔️ Raid de Servidores: guerra econômica controlada.',
-        '`!inventario` / `!inv` - 🎒 Mostra seus itens e permite **equipar suas armas** interativamente.'
+        '`!inventario` / `!inv` - 🎒 Mostra itens, armas e acesso completo à **Forja**!'
       ].join('\n') },
       { name: '⚔️ Crime & Duelo', value: [
         '`!roubar <@user>` - 🥷 Tenta furtar Nanacoins de alguém.',
-        '`!parrudo <horas>h` - 🛡️ Imunidade a roubos. Se atacado sem Ácido, o ladrão sofre dano do Escudo de Espinhos!',
+        '`!parrudo <horas>h` - 🛡️ Imunidade a roubos. Ladrões sofrem dano se atacarem sem Ácido!',
         '`!timeout` - 🚓 Verifica tempo de prisão.',
         '`!fianca [@user]` - 💸 Paga fiança para sair ou soltar amigo.',
         '`!beijarmuro` - 💋 Beija o muro e testa sua sorte.'
       ].join('\n') },
-      { name: '🎮 Games & RPG', value: [
+      { name: '🎮 Games, Boss & RPG', value: [
         '`!games` - 🎰 Hub central de jogos: Forca, Trivia, Duelo e **Lootboxes**!'
       ].join('\n') },
       { name: '🧠 IA & Utilidades', value: [
@@ -79,22 +79,16 @@ function buildHelpEmbed() {
 function buildNewEmbed() {
   return new EmbedBuilder()
     .setColor('#00FF00') // Verde neon chamativo
-    .setTitle('🌟 NOVIDADES DA GRANDE REFORMA 🌟')
-    .setDescription('O servidor voltou! O bot foi reformulado com **Armas Equipáveis, Raid Bosses Dinâmicos e um Mercado Centralizado**. Confira o que mudou:')
+    .setTitle('🌟 ATUALIZAÇÃO: ECONOMIA 2.0 & RAIDS 🌟')
+    .setDescription('O servidor e o BotTTs sofreram um MEGA UPDATE focado na nova **Economia Global e PvP de Servidores**! Confira o que mudou:')
     .addFields(
-      { name: '🐉 Boss Raid Dinâmico', value: 'O World Boss e o **Mini Boss** agora têm **Fases de Vida**, ataques, fraquezas e HP randomizado! Os visuais deles (imagens de IA) mudam a cada invocação. Use sua arma para perfurar a defesa e ganhar prêmios imensos!' },
-      { name: '⚔️ Loja & Inventário 2.0', value: 'As Lootboxes foram movidas para dentro de `!games` e as armas são equipadas diretamente por botões em `!inv`. A `!loja` agora conta com UI completa com emojis de raridade para cada arma!' },
-      { name: '🎒 Nova Bolsa & Transações', value: 'Comando `!bolsa` centraliza tudo! Venda seus itens e armas, compre da comunidade ou faça "Trades". Se quiser dinheiro rápido, faça a **Venda Instantânea** por 55% do valor do item direto pro bot.' },
-      { name: '🛡️ Ajustes no Crime', value: [
-        '💸 **Escudo de Espinhos:** Pune o ladrão *imediatamente* na hora do roubo.',
-        '🧪 **Ácido:** Fura o Parrudo de primeira se você tiver a poção.'
-      ].join('\n') },
-      { name: '🎮 Melhorias de Jogo', value: [
-        '🔐 **Lock de Dono:** Só quem usa o comando `!games` pode escolher o tema ou configurar a Forca/Trivia. Nada de roubarem seu menu!',
-        '📚 **Novos Temas:** Forca e Show do Milhão ganharam **10 temas novos** e seleção de rodadas.'
-      ].join('\n') }
+      { name: '📈 Bolsa de Valores & Loja Viva', value: 'Esqueça os preços fixos! A `!loja` agora possui **Estoque Virtual** que limita a demanda e oscila o preço. Use a `!bolsa` para vender seus itens a preços personalizados para a comunidade, lucrando com a especulação!' },
+      { name: '⚒️ A Grande Forja e Crafting', value: 'Entre no seu `!inv` e visite a **Forja**. Você pode usar os materiais coletados (Pó Cósmico, Sucata, etc.) para **Reparar** armas, **Fortificar** atributos, ativar **Buffs** temporários ou até **Criar Armas** novas do zero! Cansado da habilidade de uma arma Lendária? Use o **Reroll**!' },
+      { name: '⚔️ Raids entre Servidores', value: 'Use `!raid` para engajar em **guerras econômicas interservidores**. Reúna seus aliados, compre *Estandartes de Guerra* ou *Escudos do Servidor* e invada a economia de outra comunidade para roubar até 8% dos seus fundos!' },
+      { name: '🐉 Bosses dropam Materiais', value: 'Derrotar o World Boss e o Mini Boss não te dá mais apenas dinheiro: eles agora dropam **Materiais de Forja e Núcleos Lendários**. Caçá-los se tornou essencial para quem quer fortificar as melhores armas.' },
+      { name: '🎒 Empilhamento de Itens', value: 'Consumíveis e Materiais agora são perfeitamente empilháveis no seu inventário, permitindo estocar recursos massivos e vender lotes completos na Bolsa.' }
     )
-    .setImage('https://media.tenor.com/XqT7hS_m4_kAAAAC/hype-train.gif') // Gif chamativo de hype
+    .setImage('https://media.tenor.com/XqT7hS_m4_kAAAAC/hype-train.gif')
     .setFooter({ text: 'Bem-vindos a nova era da Economia! Usem !help para ver os comandos.' });
 }
 
@@ -415,11 +409,28 @@ function start(options = {}) {
   client.botTtsTestChannelId = testChannelId;
 
   client.once("clientReady", () => {
-    console.log(`✅ Bot logado como ${client.user.tag}`);
+    console.log("=========================================");
+    console.log(`✅ Bot conectado ao Discord: ${client.user.tag}`);
+    console.log("=========================================");
     if (testMode) {
-      console.log(`🧪 Modo teste ativo. Respondendo apenas no canal ${testChannelId}.`);
+      console.log(`🧪 [AVISO] MODO DE TESTE ATIVO! Escutando apenas no canal ID: ${testChannelId}`);
     }
+    
+    console.log("⚙️  Inicializando Ecossistema e Módulos...");
+    console.log(" ├─ 📦 Loja e Estoque Virtual: OK");
+    console.log(" ├─ 📈 Bolsa de Valores (Market): OK");
+    console.log(" ├─ 🔨 Forja, Buffs e Crafting: OK");
+    console.log(" ├─ 🐉 Eventos de World Boss: OK");
+    console.log(" └─ ⚔️  Raids entre Servidores: OK");
+    
+    const { getActiveOrders } = require("../economy/market");
+    const marketCount = getActiveOrders().length;
+    console.log(`\n📊 Status Atual: ${marketCount} ordens na Bolsa.`);
+    
+    console.log("⏳ Agendando eventos e Raids ativas...");
     scheduleExistingRaids(client);
+    
+    console.log("✨ Tudo pronto! O BotTTs já está escutando comandos.");
   });
 
   client.on("messageCreate", (message) => {
@@ -469,14 +480,14 @@ function start(options = {}) {
 
       // Existing handlers at the end
       handleButtonInteraction(interaction).catch((err) => {
-        console.error("🔥 Erro inesperado no duelo interactionCreate:", err);
+        if (err.code !== 10062) console.error("🔥 Erro inesperado no duelo interactionCreate:", err);
       });
       handleRpgInteraction(interaction).catch((err) => {
-        console.error("🔥 Erro inesperado no rpg interactionCreate:", err);
+        if (err.code !== 10062) console.error("🔥 Erro inesperado no rpg interactionCreate:", err);
       });
 
     } catch (err) {
-      console.error("🔥 Erro inesperado no evento interactionCreate:", err);
+      if (err.code !== 10062) console.error("🔥 Erro inesperado no evento interactionCreate:", err);
     }
   });
 

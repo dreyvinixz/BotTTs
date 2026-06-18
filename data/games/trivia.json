@@ -8548,6 +8548,306 @@
           "img": "2001 Space Odyssey bone to satellite match cut"
         }
       ]
+    },
+    "biologia": {
+      "facil": [
+        {
+          "p": "Qual gás as plantas absorvem na fotossíntese?",
+          "img": "green plant leaf glowing, absorbing energy",
+          "v": "Gás Carbônico",
+          "f": [
+            "Oxigênio",
+            "Nitrogênio",
+            "Hidrogênio"
+          ]
+        }
+      ],
+      "medio": [
+        {
+          "p": "Qual organela é a 'usina de energia' da célula?",
+          "img": "cell organelle glowing, biology microscope view",
+          "v": "Mitocôndria",
+          "f": [
+            "Ribossomo",
+            "Núcleo",
+            "Complexo de Golgi"
+          ]
+        }
+      ],
+      "dificil": [
+        {
+          "p": "Quem é considerado o pai da Genética?",
+          "img": "monk studying pea plants, 19th century vintage",
+          "v": "Gregor Mendel",
+          "f": [
+            "Charles Darwin",
+            "Louis Pasteur",
+            "Alexander Fleming"
+          ]
+        }
+      ],
+      "infernal": [
+        {
+          "p": "Qual ácido nucleico possui a base Uracila?",
+          "img": "rna molecule strand glowing, biology diagram",
+          "v": "RNA",
+          "f": [
+            "DNA",
+            "ATP",
+            "NADH"
+          ]
+        }
+      ]
+    },
+    "politica": {
+      "facil": [
+        {
+          "p": "Qual é o sistema de governo onde o povo vota?",
+          "img": "ballot box, voting concept, glowing",
+          "v": "Democracia",
+          "f": [
+            "Monarquia",
+            "Ditadura",
+            "Oligarquia"
+          ]
+        }
+      ],
+      "medio": [
+        {
+          "p": "Quantos senadores cada estado elege no Brasil?",
+          "img": "brazilian congress building, politics",
+          "v": "Três",
+          "f": [
+            "Dois",
+            "Quatro",
+            "Depende da população"
+          ]
+        }
+      ],
+      "dificil": [
+        {
+          "p": "Quem escreveu a obra 'O Príncipe'?",
+          "img": "renaissance book, quill and ink, machiavelli concept",
+          "v": "Maquiavel",
+          "f": [
+            "Rousseau",
+            "John Locke",
+            "Thomas Hobbes"
+          ]
+        }
+      ],
+      "infernal": [
+        {
+          "p": "Qual filósofo dividiu o poder em Três Poderes?",
+          "img": "french philosopher, scales of justice, vintage portrait",
+          "v": "Montesquieu",
+          "f": [
+            "Voltaire",
+            "Kant",
+            "Platão"
+          ]
+        }
+      ]
+    },
+    "economia": {
+      "facil": [
+        {
+          "p": "Qual é a moeda oficial dos Estados Unidos?",
+          "img": "american currency, glowing dollar sign",
+          "v": "Dólar",
+          "f": [
+            "Euro",
+            "Libra",
+            "Peso"
+          ]
+        },
+        {
+          "p": "O que significa a sigla PIB?",
+          "img": "economic growth chart, glowing upward arrow",
+          "v": "Produto Interno Bruto",
+          "f": [
+            "Preço Interno Base",
+            "Produto Industrial",
+            "Plano de Investimento"
+          ]
+        }
+      ],
+      "medio": [
+        {
+          "p": "O que a inflação causa no dinheiro?",
+          "img": "inflation concept, money losing value, fire",
+          "v": "Perda de poder de compra",
+          "f": [
+            "Aumento de valor",
+            "Deflação",
+            "Rendimento extra"
+          ]
+        },
+        {
+          "p": "Como é chamada a famosa rua financeira de NY?",
+          "img": "wall street stock exchange, trading floor, bull statue",
+          "v": "Wall Street",
+          "f": [
+            "Broadway",
+            "Fifth Avenue",
+            "Silicon Valley"
+          ]
+        }
+      ],
+      "dificil": [
+        {
+          "p": "Qual teoria defende a mínima intervenção do Estado na economia?",
+          "img": "free market concept, invisible hand, scales of justice",
+          "v": "Liberalismo",
+          "f": [
+            "Keynesianismo",
+            "Marxismo",
+            "Mercantilismo"
+          ]
+        },
+        {
+          "p": "O que é um mercado em 'Bear Market'?",
+          "img": "bear market concept, stock charts going down, red candles",
+          "v": "Tendência de queda",
+          "f": [
+            "Tendência de alta",
+            "Mercado estável",
+            "Alta volatilidade"
+          ]
+        }
+      ],
+      "infernal": [
+        {
+          "p": "O que ilustra a Curva de Laffer?",
+          "img": "laffer curve chart, tax revenue concept, mathematics",
+          "v": "Impostos x Arrecadação",
+          "f": [
+            "Inflação x Desemprego",
+            "Oferta x Demanda",
+            "Juros x Câmbio"
+          ]
+        },
+        {
+          "p": "Qual acordo atrelou o dólar ao ouro em 1944?",
+          "img": "vintage gold standard, international conference 1944",
+          "v": "Bretton Woods",
+          "f": [
+            "Plano Marshall",
+            "Acordo de Paris",
+            "Tratado de Roma"
+          ]
+        },
+        {
+          "p": "O que significa a prática de 'Quantitative Easing'?",
+          "img": "central bank printing money concept, glowing vault",
+          "v": "Expansão monetária",
+          "f": [
+            "Aumento de juros",
+            "Aperto fiscal",
+            "Controle de preços"
+          ]
+        }
+      ]
+    },
+    "artelit": {
+      "facil": [
+        {
+          "p": "Quem pintou a Mona Lisa?",
+          "img": "renaissance painter at work, canvas, palette",
+          "v": "Leonardo da Vinci",
+          "f": [
+            "Van Gogh",
+            "Picasso",
+            "Michelangelo"
+          ]
+        }
+      ],
+      "medio": [
+        {
+          "p": "Quem escreveu 'Dom Quixote'?",
+          "img": "spanish knight fighting windmills, vintage book",
+          "v": "Miguel de Cervantes",
+          "f": [
+            "Shakespeare",
+            "Dante Alighieri",
+            "Victor Hugo"
+          ]
+        }
+      ],
+      "dificil": [
+        {
+          "p": "A qual movimento pertence o quadro 'O Grito'?",
+          "img": "expressionist painting style, abstract scream",
+          "v": "Expressionismo",
+          "f": [
+            "Impressionismo",
+            "Surrealismo",
+            "Cubismo"
+          ]
+        }
+      ],
+      "infernal": [
+        {
+          "p": "Quem é o autor de 'A Divina Comédia'?",
+          "img": "italian poet, inferno purgatorio paradiso concept",
+          "v": "Dante Alighieri",
+          "f": [
+            "Homero",
+            "Virgílio",
+            "Petrarca"
+          ]
+        }
+      ]
+    },
+    "astronomia": {
+      "facil": [
+        {
+          "p": "Qual é o maior planeta do Sistema Solar?",
+          "img": "giant gas planet, space, starry background",
+          "v": "Júpiter",
+          "f": [
+            "Saturno",
+            "Terra",
+            "Marte"
+          ]
+        }
+      ],
+      "medio": [
+        {
+          "p": "Qual planeta é conhecido por seus belos anéis?",
+          "img": "planet with beautiful bright rings, deep space",
+          "v": "Saturno",
+          "f": [
+            "Júpiter",
+            "Urano",
+            "Netuno"
+          ]
+        }
+      ],
+      "dificil": [
+        {
+          "p": "Qual é o nome da nossa galáxia?",
+          "img": "spiral galaxy, milky way, shining stars",
+          "v": "Via Láctea",
+          "f": [
+            "Andrômeda",
+            "Sombrero",
+            "Triângulo"
+          ]
+        }
+      ],
+      "infernal": [
+        {
+          "p": "Qual é a estrela mais próxima da Terra (além do Sol)?",
+          "img": "red dwarf star in deep space, glowing",
+          "v": "Proxima Centauri",
+          "f": [
+            "Sirius",
+            "Betelgeuse",
+            "Alpha Centauri A"
+          ]
+        }
+      ]
     }
   }
 }
