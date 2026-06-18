@@ -20,6 +20,7 @@
     "bossIntervalMs": 43200000,
     "miniBossIntervalMs": 21600000
   },
+  "videoChannels": [],
   "forca": {
     "timeoutMs": 300000,
     "nextRoundDelayMs": 3000,

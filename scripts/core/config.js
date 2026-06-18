@@ -10,6 +10,12 @@ function getEnvNumber(name, fallback) {
   return Number.isFinite(value) ? value : fallback;
 }
 
+function getEnvBoolean(name, fallback = false) {
+  const value = process.env[name];
+  if (value === undefined) return fallback;
+  return ["1", "true", "yes", "on"].includes(String(value).trim().toLowerCase());
+}
+
 function getEnvString(name, fallback) {
   return process.env[name] || fallback;
 }
@@ -88,10 +94,26 @@ const config = {
   FORGE_STEPS: getEnvNumber("FORGE_STEPS", 25),
   FORGE_WIDTH: getEnvNumber("FORGE_WIDTH", 512),
   FORGE_HEIGHT: getEnvNumber("FORGE_HEIGHT", 512),
+  FORGE_CFG_SCALE: getEnvNumber("FORGE_CFG_SCALE", 6.5),
   FORGE_SAMPLER: getEnvString("FORGE_SAMPLER", "Euler a"),
   FORGE_BATCH_SIZE: getEnvNumber("FORGE_BATCH_SIZE", 1),
-  FORGE_REALISTIC_NEGATIVE_PROMPT: getEnvString("FORGE_REALISTIC_NEGATIVE_PROMPT", "ugly, low quality, bad anatomy, deformed, watermark, text, extra fingers, mutated hands, poorly drawn, blurry, artifacts, cluttered background, messy composition"),
-  FORGE_ANIME_NEGATIVE_PROMPT: getEnvString("FORGE_ANIME_NEGATIVE_PROMPT", "ugly, low quality, bad anatomy, deformed, poorly drawn face, poorly drawn hands, missing fingers, missing limbs, cluttered background, messy composition, watermark, text, blurry"),
+  FORGE_REALISTIC_NEGATIVE_PROMPT: getEnvString("FORGE_REALISTIC_NEGATIVE_PROMPT", "ugly, low quality, bad anatomy, deformed, watermark, text, extra fingers, mutated hands, poorly drawn, blurry, artifacts, cluttered background, messy composition, incoherent, abstract, unreadable subject, duplicate subject"),
+  FORGE_ANIME_NEGATIVE_PROMPT: getEnvString("FORGE_ANIME_NEGATIVE_PROMPT", "ugly, low quality, bad anatomy, deformed, poorly drawn face, poorly drawn hands, missing fingers, missing limbs, cluttered background, messy composition, watermark, text, blurry, incoherent, abstract, unreadable subject, duplicate subject"),
+
+  VIDEO_JOB_ENABLED: getEnvBoolean("VIDEO_JOB_ENABLED", false),
+  VIDEO_PROVIDER_URL: getEnvString("VIDEO_PROVIDER_URL", "https://api.cobalt.tools/api/json"),
+  VIDEO_PROVIDER_RETRIES: getEnvNumber("VIDEO_PROVIDER_RETRIES", 1),
+  VIDEO_INTERVAL_MS: getEnvNumber("VIDEO_INTERVAL_MS", 3_600_000),
+  VIDEO_INITIAL_DELAY_MS: getEnvNumber("VIDEO_INITIAL_DELAY_MS", 3_600_000),
+  VIDEO_JITTER_MS: getEnvNumber("VIDEO_JITTER_MS", 300_000),
+  VIDEO_CHANNEL_SEND_DELAY_MS: getEnvNumber("VIDEO_CHANNEL_SEND_DELAY_MS", 1500),
+  VIDEO_API_TIMEOUT_MS: getEnvNumber("VIDEO_API_TIMEOUT_MS", 15_000),
+  VIDEO_DOWNLOAD_TIMEOUT_MS: getEnvNumber("VIDEO_DOWNLOAD_TIMEOUT_MS", 60_000),
+  MAX_VIDEO_BYTES: getEnvNumber("MAX_VIDEO_BYTES", 25 * 1024 * 1024),
+  VIDEO_MAX_FAILURES: getEnvNumber("VIDEO_MAX_FAILURES", 5),
+  VIDEO_RECENT_HISTORY_LIMIT: getEnvNumber("VIDEO_RECENT_HISTORY_LIMIT", 3),
+  VIDEO_HISTORY_LIMIT: getEnvNumber("VIDEO_HISTORY_LIMIT", 50),
+  VIDEO_CHANNEL_IDS: getEnvList("VIDEO_CHANNEL_IDS"),
 
   EDGE_TTS_VOICE: getEnvString("EDGE_TTS_VOICE", "pt-BR-AntonioNeural"),
   GOOGLE_TTS_LANGUAGE_CODE: getEnvString("GOOGLE_TTS_LANGUAGE_CODE", "pt-BR"),
@@ -121,8 +143,14 @@ config.paths = {
   economia: ECONOMIA_PATH,
   timers: TIMERS_PATH,
   inventory: path.resolve(DATA_DIR, "inventory.json"),
-  market: path.resolve(DATA_DIR, "market.json")
+  market: path.resolve(DATA_DIR, "market.json"),
+  videos: path.resolve(ROOT_DIR, getEnvString("VIDEOS_PATH", path.join("data", "videos.json"))),
+  videoHistory: path.resolve(ROOT_DIR, getEnvString("VIDEO_HISTORY_PATH", path.join("data", "videoHistory.json"))),
+  videoTmp: path.resolve(ROOT_DIR, getEnvString("VIDEO_TMP_DIR", path.join("data", "tmp", "videos")))
 };
+
+const staticVideoChannelIds = Array.isArray(staticData.app.videoChannels) ? staticData.app.videoChannels : [];
+config.VIDEO_CHANNEL_IDS = config.VIDEO_CHANNEL_IDS.length > 0 ? config.VIDEO_CHANNEL_IDS : staticVideoChannelIds;
 
 config.env = {
   discordToken: config.DISCORD_TOKEN,
@@ -137,6 +165,11 @@ config.env = {
     host: config.FORGE_HOST,
     realisticModel: config.FORGE_REALISTIC_MODEL,
     animeModel: config.FORGE_ANIME_MODEL
+  },
+  videos: {
+    enabled: config.VIDEO_JOB_ENABLED,
+    channels: config.VIDEO_CHANNEL_IDS,
+    maxBytes: config.MAX_VIDEO_BYTES
   }
 };
 

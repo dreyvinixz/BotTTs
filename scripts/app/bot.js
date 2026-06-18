@@ -26,6 +26,7 @@ const { handleRaidCommand, handleRaidInteraction, scheduleExistingRaids } = requ
 const { handleInventoryCommand, handleEquipWeaponCommand } = require("../economy/weapons");
 const { checkAndSendTip } = require("../features/tips");
 const { handleAdminCommand } = require("../admin/admin");
+const { startVideoScheduler, runVideoJobOnce } = require("../core/videoScheduler");
 
 function createClient() {
   return new Client({
@@ -69,6 +70,7 @@ function buildHelpEmbed() {
         '`!question <texto>` - 🧠 Pergunta séria, resposta profissional.',
         '`!img <prompt>` - 🖼️ Gera imagem realista pelo Forge.',
         '`!anime <prompt>` - 🌸 Gera imagem em estilo anime pelo Forge.',
+        '`!reels` - 🎬 Envia um reel configurado como MP4 neste canal.',
         '`!f <texto>` - 🔊 Fala no canal de voz onde você está.',
         '`!clear [cmd] <num>` - 🧹 Apaga mensagens do bot ou comandos de usuários.'
       ].join('\n') }
@@ -220,6 +222,33 @@ async function handleClearCommand(message, text) {
   }
 }
 
+function formatReelsFailure(reason) {
+  const messages = {
+    already_running: "Já tem um envio de reel em andamento. Tenta de novo em instantes.",
+    no_videos: "Não tem nenhum vídeo ativo em `data/videos.json`.",
+    no_channels: "Não encontrei canal para enviar o reel.",
+    no_valid_channels: "Não consegui usar este canal para enviar o reel.",
+    send_failed: "Baixei o reel, mas o Discord recusou o upload.",
+    video_failed: "Falhou ao resolver ou baixar o reel. Marquei a falha no histórico do vídeo.",
+    job_error: "O ciclo manual de reel falhou."
+  };
+  return messages[reason] || "Não consegui enviar um reel agora.";
+}
+
+async function handleReelsCommand(message) {
+  const status = await message.reply("🎬 Buscando um reel para este canal...");
+  const result = await runVideoJobOnce(message.client, {
+    channels: [message.channel],
+    channelDelayMs: 0
+  });
+
+  if (result.ok) {
+    return status.edit("✅ Reel enviado neste canal.").catch(() => null);
+  }
+
+  return status.edit(`❌ ${formatReelsFailure(result.reason)}`).catch(() => null);
+}
+
 async function handleMessage(message) {
   if (message.author.bot) return;
   if (!message.guild) return;
@@ -258,6 +287,10 @@ async function handleMessage(message) {
 
   if (isCommand(message, ["!clear"])) {
     return handleClearCommand(message, getCommandText(message, ["!clear"]));
+  }
+
+  if (isCommand(message, ["!reels", "!reel"])) {
+    return handleReelsCommand(message);
   }
 
   if (isCommand(message, ["!games"])) {
@@ -429,6 +462,7 @@ function start(options = {}) {
     
     console.log("⏳ Agendando eventos e Raids ativas...");
     scheduleExistingRaids(client);
+    startVideoScheduler(client);
     
     console.log("✨ Tudo pronto! O BotTTs já está escutando comandos.");
   });

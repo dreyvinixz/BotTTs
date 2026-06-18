@@ -25,10 +25,10 @@ function promptFallbackImagem(ideia, isAnime) {
   const base = limparIdeiaImagem(ideia) || ideia;
 
   if (isAnime) {
-    return `masterpiece anime art, ${base}, clean composition, vibrant colors, detailed, best quality`;
+    return `masterpiece anime art, single clear subject: ${base}, centered composition, simple background, vibrant colors, detailed, best quality`;
   }
 
-  return `professional realistic photo, ${base}, sharp focus, natural lighting, high detail`;
+  return `professional realistic photo, single clear subject: ${base}, centered composition, simple background, sharp focus, natural lighting, high detail`;
 }
 
 function lerPoliticasImagem() {
@@ -54,11 +54,13 @@ Rules:
 - Always write in English.
 - Preserve the user's main subject and intent.
 - Keep the prompt simple and powerful. Do not overload it with many objects.
-- Use this structure: quality/style, main subject, one action/pose, one simple place, one lighting phrase.
+- Prefer one clear subject only. Use centered composition and a simple readable background.
+- Use this structure: quality/style, single main subject, one action/pose, one simple place/background, one lighting phrase.
 - If the input is vague, add only the most useful missing details.
 - Do not add random celebrities, brands, text, logos, watermarks, or extra people unless requested.
+- Avoid abstract, chaotic, surreal, or symbolic imagery unless the user explicitly asks for it.
 - Avoid moral commentary. This is prompt engineering, not chat.
-- Keep it under 35 words.
+- Keep it between 20 and 40 words.
 - Style target: ${estilo}.
 
 Image-only policy/configuration from politicas_imagem.txt:
@@ -66,13 +68,13 @@ ${politicasImagem || "No image-only policy configured."}
 
 Examples:
 Input: "Gere uma imagem de um Uruguaiano"
-Output: "professional realistic portrait, adult Uruguayan man, casual streetwear, Montevideo street, golden hour lighting, sharp focus, high detail"
+Output: "professional realistic portrait, adult Uruguayan man, casual streetwear, centered composition, simple Montevideo street background, golden hour lighting, sharp focus"
 
 Input: "um guerreiro medieval com espada"
-Output: "cinematic realistic photo, medieval warrior holding a sword, worn armor, battlefield, dramatic cloudy lighting, sharp focus, high detail"
+Output: "cinematic realistic photo, medieval warrior holding a sword, worn armor, centered composition, simple battlefield background, dramatic cloudy lighting, sharp focus"
 
 Input: "gato astronauta"
-Output: "cute astronaut cat, floating in a spaceship, detailed space suit, soft cinematic lighting, sharp focus, high detail"
+Output: "cute astronaut cat, detailed space suit, centered composition, simple spaceship interior background, soft cinematic lighting, sharp focus, high detail"
 `.trim();
 
   try {
@@ -103,6 +105,7 @@ async function gerarImagemNoForge(promptEmIngles, isAnime, customNegativePrompt)
     prompt: promptEmIngles,
     negative_prompt,
     steps: config.FORGE_STEPS,
+    cfg_scale: config.FORGE_CFG_SCALE,
     width: config.FORGE_WIDTH,
     height: config.FORGE_HEIGHT,
     override_settings: {
