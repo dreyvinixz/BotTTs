@@ -37,16 +37,12 @@ async function resolveVideoChannels(client, channelIds = config.VIDEO_CHANNEL_ID
 async function sendVideoToChannels(channels, video, filePath, bytes, options = {}) {
   const sentChannelIds = [];
   const delayMs = options.channelDelayMs ?? config.VIDEO_CHANNEL_SEND_DELAY_MS;
-  const content = video.title
-    ? `🎬 **${video.title}**`
-    : "🎬 Vídeo automático";
-
   for (const channel of channels) {
     try {
       const attachment = new AttachmentBuilder(filePath, {
         name: `${video.id || "video"}.mp4`
       });
-      await channel.send({ content, files: [attachment] });
+      await channel.send({ files: [attachment] });
       sentChannelIds.push(channel.id);
       if (delayMs > 0) await sleep(delayMs);
     } catch (err) {

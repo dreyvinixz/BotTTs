@@ -243,7 +243,7 @@ async function handleReelsCommand(message) {
   });
 
   if (result.ok) {
-    return status.edit("✅ Reel enviado neste canal.").catch(() => null);
+    return status.delete().catch(() => null);
   }
 
   return status.edit(`❌ ${formatReelsFailure(result.reason)}`).catch(() => null);

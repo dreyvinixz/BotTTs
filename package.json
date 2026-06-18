@@ -32,6 +32,7 @@
     "dotenv": "^17.2.1",
     "elevenlabs": "^1.59.0",
     "ffmpeg-static": "^5.2.0",
+    "instagram-url-direct": "^2.0.7",
     "libsodium-wrappers": "^0.7.15",
     "msedge-tts": "^2.0.5",
     "openai": "^5.12.2",

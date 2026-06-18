@@ -3,6 +3,7 @@ const { once } = require("events");
 const path = require("path");
 const config = require("./config");
 const { ensureDir } = require("./storage");
+const { instagramGetUrl } = require("instagram-url-direct");
 
 const INSTAGRAM_HOSTS = new Set(["instagram.com", "www.instagram.com"]);
 
@@ -85,37 +86,18 @@ function extractDirectMp4Url(providerPayload) {
 
 async function resolveDirectMp4Url(instagramUrl, options = {}) {
   const sourceUrl = validateInstagramUrl(instagramUrl);
-  const providerUrl = options.providerUrl || config.VIDEO_PROVIDER_URL;
-  assertHttpsUrl(providerUrl, "URL do provider de vídeo");
-
   const retries = Number.isInteger(options.retries) ? options.retries : config.VIDEO_PROVIDER_RETRIES;
   let lastError = null;
 
   for (let attempt = 0; attempt <= retries; attempt += 1) {
     try {
-      const response = await fetchWithTimeout(providerUrl, {
-        method: "POST",
-        headers: {
-          "Accept": "application/json",
-          "Content-Type": "application/json"
-        },
-        body: JSON.stringify({
-          url: sourceUrl,
-          downloadMode: "auto",
-          filenameStyle: "basic",
-          videoQuality: "max"
-        })
-      }, options.apiTimeoutMs || config.VIDEO_API_TIMEOUT_MS, options.fetchImpl || fetch);
-
-      if (!response.ok) {
-        throw new Error(`Provider respondeu status ${response.status}.`);
-      }
-
-      const payload = await response.json();
-      const directUrl = extractDirectMp4Url(payload);
-      if (!directUrl) {
+      const payload = await instagramGetUrl(sourceUrl);
+      
+      if (!payload || !payload.url_list || payload.url_list.length === 0) {
         throw new Error("Provider não retornou URL direta do MP4.");
       }
+      
+      const directUrl = payload.url_list[0];
       return assertHttpsUrl(directUrl, "URL direta do MP4").toString();
     } catch (err) {
       lastError = err;
