@@ -31,6 +31,8 @@ function carregarTimers() {
       if (parsed.prison) parsed.prison.forEach(([k, v]) => prisonMap.set(k, v));
       if (parsed.parrudo) parsed.parrudo.forEach(([k, v]) => parrudoMap.set(k, v));
       if (parsed.beijo) parsed.beijo.forEach(([k, v]) => beijoCooldowns.set(k, v));
+      if (parsed.robFailures) parsed.robFailures.forEach(([k, v]) => robFailures.set(k, v));
+      if (parsed.rouboCooldowns) parsed.rouboCooldowns.forEach(([k, v]) => rouboCooldowns.set(k, v));
     }
   } catch (err) {
     console.error("Erro ao carregar timers:", err);
@@ -42,7 +44,9 @@ carregarTimers();
 const salvarTimers = createDebouncedJsonWriter(config.TIMERS_PATH, () => ({
   prison: Array.from(prisonMap.entries()),
   parrudo: Array.from(parrudoMap.entries()),
-  beijo: Array.from(beijoCooldowns.entries())
+  beijo: Array.from(beijoCooldowns.entries()),
+  robFailures: Array.from(robFailures.entries()),
+  rouboCooldowns: Array.from(rouboCooldowns.entries())
 }), config.static.app.timers.saveDebounceMs);
 
 function isParrudo(userId) {
@@ -156,6 +160,7 @@ async function handleRoubarCommand(message, text) {
     }
 
     rouboCooldowns.set(userId, data);
+    salvarTimers();
   }
 
   if (isParrudo(targetUser.id)) {
@@ -243,6 +248,9 @@ async function handleRoubarCommand(message, text) {
     removeCoins(targetUser.id, stolen);
     addCoins(userId, stolen);
 
+    robFailures.delete(userId);
+    salvarTimers();
+
     const embed = new EmbedBuilder()
       .setColor('#00AA00') // Verde escuro
       .setTitle('🥷 ASSALTO BEM-SUCEDIDO!')
@@ -281,6 +289,7 @@ async function handleRoubarCommand(message, text) {
           .setDescription('A polícia tentou te prender pela 2ª falha...\nMas você jogou uma **Bomba de Fumaça** no chão e desapareceu no ar!')
           .setFooter({ text: 'Suas falhas de roubo foram zeradas.' });
         embeds.push(smokeEmbed);
+        salvarTimers();
         return message.reply({ embeds });
       }
 

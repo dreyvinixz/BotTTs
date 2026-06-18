@@ -5,6 +5,10 @@ const { recordLedgerEvent } = require("./ledger");
 const { getCoins, addCoins, removeCoins, formatCoins } = require("./economy");
 const { listWeaponDefs, grantWeapon, formatWeaponLabel } = require("./weapons");
 
+const fs = require("fs");
+const path = require("path");
+const { createDebouncedJsonWriter } = require("../core/storage");
+
 // Estruturas de memória para guardar os boosts ativos
 // Map<userId, { mult: number, expire: timestamp }>
 const gameBoosts = new Map();
@@ -16,6 +20,31 @@ const stealBoosts = new Map();
 const peCabraBoosts = new Map();
 const escudoBoosts = new Map();
 
+const BOOSTS_PATH = path.join(config.paths.data, "boosts.json");
+
+function carregarBoosts() {
+  try {
+    if (fs.existsSync(BOOSTS_PATH)) {
+      const data = JSON.parse(fs.readFileSync(BOOSTS_PATH, "utf-8"));
+      if (data.gameBoosts) data.gameBoosts.forEach(([k, v]) => gameBoosts.set(k, v));
+      if (data.stealBoosts) data.stealBoosts.forEach(([k, v]) => stealBoosts.set(k, v));
+      if (data.peCabraBoosts) data.peCabraBoosts.forEach(([k, v]) => peCabraBoosts.set(k, v));
+      if (data.escudoBoosts) data.escudoBoosts.forEach(([k, v]) => escudoBoosts.set(k, v));
+    }
+  } catch (err) {
+    console.error("Erro ao carregar boosts:", err);
+  }
+}
+
+const salvarBoosts = createDebouncedJsonWriter(BOOSTS_PATH, () => ({
+  gameBoosts: Array.from(gameBoosts.entries()),
+  stealBoosts: Array.from(stealBoosts.entries()),
+  peCabraBoosts: Array.from(peCabraBoosts.entries()),
+  escudoBoosts: Array.from(escudoBoosts.entries())
+}), config.static.app.timers.saveDebounceMs || 5000);
+
+carregarBoosts();
+
 const BOOST_PRICES = config.static.shop.boosts || {};
 const BOOST_MENU_ORDER = config.static.shop.menuOrder || Object.keys(BOOST_PRICES);
 
@@ -25,6 +54,7 @@ function getGameMultiplier(userId) {
   const boost = gameBoosts.get(userId);
   if (Date.now() > boost.expire) {
     gameBoosts.delete(userId);
+    salvarBoosts();
     return 1;
   }
   return boost.mult;
@@ -35,6 +65,7 @@ function getStealChanceExtra(userId) {
   const boost = stealBoosts.get(userId);
   if (Date.now() > boost.expire) {
     stealBoosts.delete(userId);
+    salvarBoosts();
     return 0;
   }
   return boost.chanceExtra;
@@ -44,6 +75,7 @@ function hasPeCabra(userId) {
   if (!peCabraBoosts.has(userId)) return false;
   if (Date.now() > peCabraBoosts.get(userId)) {
     peCabraBoosts.delete(userId);
+    salvarBoosts();
     return false;
   }
   return true;
@@ -53,6 +85,7 @@ function hasEscudoEspinhos(userId) {
   if (!escudoBoosts.has(userId)) return false;
   if (Date.now() > escudoBoosts.get(userId)) {
     escudoBoosts.delete(userId);
+    salvarBoosts();
     return false;
   }
   return true;
@@ -61,18 +94,20 @@ function hasEscudoEspinhos(userId) {
 // Limpeza de Memória Periódica (a cada 1 hora)
 const cleanupInterval = setInterval(() => {
   const now = Date.now();
+  let changed = false;
   for (const [userId, boost] of gameBoosts.entries()) {
-    if (now > boost.expire) gameBoosts.delete(userId);
+    if (now > boost.expire) { gameBoosts.delete(userId); changed = true; }
   }
   for (const [userId, boost] of stealBoosts.entries()) {
-    if (now > boost.expire) stealBoosts.delete(userId);
+    if (now > boost.expire) { stealBoosts.delete(userId); changed = true; }
   }
   for (const [userId, expire] of peCabraBoosts.entries()) {
-    if (now > expire) peCabraBoosts.delete(userId);
+    if (now > expire) { peCabraBoosts.delete(userId); changed = true; }
   }
   for (const [userId, expire] of escudoBoosts.entries()) {
-    if (now > expire) escudoBoosts.delete(userId);
+    if (now > expire) { escudoBoosts.delete(userId); changed = true; }
   }
+  if (changed) salvarBoosts();
 }, config.static.app.boosts.cleanupIntervalMs);
 cleanupInterval.unref?.();
 
@@ -292,15 +327,19 @@ async function handleBoostInteraction(interaction) {
       mult: boostConfig.mult,
       expire: Date.now() + boostConfig.durationMs
     });
+    salvarBoosts();
   } else if (boostConfig.type === 'steal') {
     stealBoosts.set(userId, {
       chanceExtra: boostConfig.chanceExtra,
       expire: Date.now() + boostConfig.durationMs
     });
+    salvarBoosts();
   } else if (boostConfig.type === 'buff' && boostConfig.buff === 'peCabra') {
     peCabraBoosts.set(userId, Date.now() + boostConfig.durationMs);
+    salvarBoosts();
   } else if (boostConfig.type === 'buff' && boostConfig.buff === 'escudoEspinhos') {
     escudoBoosts.set(userId, Date.now() + boostConfig.durationMs);
+    salvarBoosts();
   } else if (boostConfig.type === 'item' || boostConfig.type === 'material') {
     const { addItem } = require("./inventory");
     addItem(userId, choice, 1);
@@ -341,15 +380,19 @@ function giveBoost(userId, choice) {
       mult: boostConfig.mult,
       expire: Date.now() + boostConfig.durationMs
     });
+    salvarBoosts();
   } else if (boostConfig.type === 'steal') {
     stealBoosts.set(userId, {
       chanceExtra: boostConfig.chanceExtra,
       expire: Date.now() + boostConfig.durationMs
     });
+    salvarBoosts();
   } else if (boostConfig.type === 'buff' && boostConfig.buff === 'peCabra') {
     peCabraBoosts.set(userId, Date.now() + boostConfig.durationMs);
+    salvarBoosts();
   } else if (boostConfig.type === 'buff' && boostConfig.buff === 'escudoEspinhos') {
     escudoBoosts.set(userId, Date.now() + boostConfig.durationMs);
+    salvarBoosts();
   } else if (boostConfig.type === 'item' || boostConfig.type === 'spawnBoss' || boostConfig.type === 'spawnMiniBoss') {
     const { addItem } = require("./inventory");
     addItem(userId, choice, 1);
