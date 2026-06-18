@@ -4,6 +4,8 @@ const assert = require("node:assert/strict");
 const inventory = require("../scripts/economy/inventory");
 const weapons = require("../scripts/economy/weapons");
 
+inventory.__disableSavingForTests(true);
+
 test("weapon instances can be granted equipped and consumed", () => {
   inventory.__setDbForTests({});
   const instance = weapons.grantWeapon("u1", "espada_madeira");

@@ -414,6 +414,24 @@ function resetBossTimer() {
   lastBossTime = Date.now();
 }
 
+async function getEventChannelsForMessage(message) {
+  if (message.client?.botTtsTestMode) {
+    const testChannelId = message.client.botTtsTestChannelId || config.static.app.test?.channelId;
+    const channel = message.channelId === testChannelId
+      ? message.channel
+      : message.client.channels.cache.get(testChannelId) || await message.client.channels.fetch(testChannelId).catch(() => null);
+    return channel ? [channel] : [];
+  }
+
+  const eventChannels = [];
+  for (const channelId of EVENT_CHANNELS) {
+    const eventChannel = message.client.channels.cache.get(channelId)
+      || await message.client.channels.fetch(channelId).catch(() => null);
+    if (eventChannel) eventChannels.push(eventChannel);
+  }
+  return eventChannels;
+}
+
 async function checkAndSpawnEvent(message) {
   const now = Date.now();
 
@@ -429,8 +447,7 @@ async function checkAndSpawnEvent(message) {
     );
 
     const messagesSent = [];
-    for (const channelId of EVENT_CHANNELS) {
-      const eventChannel = message.client.channels.cache.get(channelId) || await message.client.channels.fetch(channelId).catch(() => null);
+    for (const eventChannel of await getEventChannelsForMessage(message)) {
       if (eventChannel) {
         try {
           const msg = await eventChannel.send({
@@ -440,7 +457,7 @@ async function checkAndSpawnEvent(message) {
           activeEventMsgIds.add(msg.id);
           messagesSent.push(msg);
         } catch (err) {
-          console.log(`⚠️ Falha ao spawnar evento no canal ${channelId}: ${err.message}`);
+          console.log(`⚠️ Falha ao spawnar evento no canal ${eventChannel.id}: ${err.message}`);
         }
       }
     }
@@ -461,11 +478,7 @@ async function checkAndSpawnEvent(message) {
   if (now - lastBossTime > config.static.app.events.bossIntervalMs) {
     lastBossTime = now;
     
-    const bossChannels = [];
-    for (const channelId of EVENT_CHANNELS) {
-      const bossChannel = message.client.channels.cache.get(channelId);
-      if (bossChannel) bossChannels.push(bossChannel);
-    }
+    const bossChannels = await getEventChannelsForMessage(message);
     
     if (bossChannels.length > 0) {
       const { spawnWorldBoss } = require("./boss");
@@ -476,11 +489,7 @@ async function checkAndSpawnEvent(message) {
   if (now - lastMiniBossTime > config.static.app.events.miniBossIntervalMs) {
     lastMiniBossTime = now;
 
-    const bossChannels = [];
-    for (const channelId of EVENT_CHANNELS) {
-      const bossChannel = message.client.channels.cache.get(channelId);
-      if (bossChannel) bossChannels.push(bossChannel);
-    }
+    const bossChannels = await getEventChannelsForMessage(message);
 
     if (bossChannels.length > 0) {
       const { spawnMiniBoss } = require("./boss");
@@ -516,6 +525,7 @@ module.exports = {
   checkAndSpawnEvent,
   handleEventInteraction,
   EVENT_CHANNELS,
+  getEventChannelsForMessage,
   resetBossTimer,
   maskWord,
   getPalavraAleatoria

@@ -13,6 +13,8 @@ const {
 const config = require("../core/config");
 const { createDebouncedJsonWriter, writeJsonFileSync } = require("../core/storage");
 const { getCoins, addCoins, removeCoins, formatCoins } = require("./economy");
+const { getSystemSellPrice, addStock } = require("./shopStock");
+const { recordLedgerEvent } = require("./ledger");
 const {
   getUserInventory,
   lockInventoryEntry,
@@ -23,6 +25,7 @@ const { getWeaponDef, formatWeaponLabel } = require("./weapons");
 
 let db = { orders: [], history: [], trades: [] };
 const marketConfig = config.static.app.market || {};
+let disableSavingForTests = false;
 
 function loadMarket() {
   try {
@@ -40,12 +43,19 @@ function loadMarket() {
 const saveMarket = createDebouncedJsonWriter(config.paths.market, () => db, config.static.app.timers.saveDebounceMs);
 loadMarket();
 
+function saveMarketSync() {
+  if (!disableSavingForTests) writeJsonFileSync(config.paths.market, db);
+}
+
+function scheduleMarketSave() {
+  if (!disableSavingForTests) saveMarket();
+}
+
 function now() {
   return Date.now();
 }
 
 function cleanupExpiredOrders() {
-  const active = [];
   let changed = false;
   for (const order of db.orders) {
     if (order.status === "active" && order.expiresAt <= now()) {
@@ -53,10 +63,8 @@ function cleanupExpiredOrders() {
       unlockInventoryEntry(order.sellerId, order.entry);
       changed = true;
     }
-    if (order.status === "active") active.push(order);
   }
-  db.orders = active;
-  if (changed) saveMarket();
+  if (changed) scheduleMarketSave();
 }
 
 const ITEM_LABELS = {
@@ -84,12 +92,26 @@ function getActiveOrders() {
 
 function getSuggestedPrice(entry) {
   const base = entry.basePrice || 100;
-  const recent = db.history.filter((sale) => sale.itemKey === entry.itemKey).slice(-10);
+  const recent = db.history
+    .filter((sale) => sale.itemKey === entry.itemKey)
+    .filter((sale) => sale.buyerId !== "system" && sale.sellerId !== "system")
+    .slice(-10);
   if (recent.length === 0) return base;
-  const avg = recent.reduce((sum, sale) => sum + sale.price, 0) / recent.length;
+  const avg = recent.reduce((sum, sale) => {
+    const amount = sale.entry?.kind === "item" ? sale.entry.amount || 1 : 1;
+    return sum + (sale.price / amount);
+  }, 0) / recent.length;
   const floor = base * (marketConfig.suggestedPriceFloor || 0.5);
   const ceil = base * (marketConfig.suggestedPriceCeil || 2.5);
   return Math.floor(Math.max(floor, Math.min(ceil, avg)));
+}
+
+function isPositiveInteger(value) {
+  return Number.isInteger(value) && value > 0;
+}
+
+function getEntryAmount(entry) {
+  return entry.kind === "item" ? entry.amount || 1 : 1;
 }
 
 function sellableEntries(userId) {
@@ -126,6 +148,16 @@ function sellableEntries(userId) {
 
 function createOrder(sellerId, entry, price) {
   cleanupExpiredOrders();
+  if (!entry || !["item", "weapon"].includes(entry.kind)) {
+    return { ok: false, reason: "Item inválido para venda." };
+  }
+  if (!isPositiveInteger(price)) {
+    return { ok: false, reason: "Preço inválido." };
+  }
+  if (entry.kind === "item" && !isPositiveInteger(entry.amount || 1)) {
+    return { ok: false, reason: "Quantidade inválida." };
+  }
+
   const activeBySeller = db.orders.filter((order) => order.sellerId === sellerId && order.status === "active").length;
   if (activeBySeller >= (marketConfig.maxActiveOrdersPerUser || 10)) {
     return { ok: false, reason: "Você já atingiu o limite de ordens ativas." };
@@ -133,6 +165,8 @@ function createOrder(sellerId, entry, price) {
 
   const lockedEntry = {
     ...entry,
+    amount: getEntryAmount(entry),
+    itemKey: entry.itemKey || (entry.kind === "item" ? `item:${entry.itemId}` : `weapon:${entry.weaponId}`),
     lockedUntil: now() + (marketConfig.orderExpireMs || 86400000)
   };
   if (!lockInventoryEntry(sellerId, lockedEntry)) {
@@ -143,15 +177,24 @@ function createOrder(sellerId, entry, price) {
     id: `ord_${now()}_${Math.floor(Math.random() * 10000)}`,
     sellerId,
     entry: lockedEntry,
-    itemKey: entry.itemKey,
+    itemKey: lockedEntry.itemKey,
     price,
     status: "active",
     createdAt: now(),
     expiresAt: lockedEntry.lockedUntil
   };
   db.orders.push(order);
-  writeJsonFileSync(config.paths.market, db); // Immediate sync save for critical operation
-  saveMarket(); // Also schedule debounced save
+  recordLedgerEvent("market_create_order", {
+    userId: sellerId,
+    orderId: order.id,
+    itemKey: order.itemKey,
+    itemId: lockedEntry.itemId,
+    weaponId: lockedEntry.weaponId,
+    amount: getEntryAmount(lockedEntry),
+    price
+  });
+  saveMarketSync(); // Immediate sync save for critical operation
+  scheduleMarketSave(); // Also schedule debounced save
   return { ok: true, order };
 }
 
@@ -162,18 +205,44 @@ function buyOrder(buyerId, orderId) {
   if (order.sellerId === buyerId) return { ok: false, reason: "Você não pode comprar sua própria ordem." };
   if (getCoins(buyerId) < order.price) return { ok: false, reason: "Saldo insuficiente para comprar esta ordem." };
 
+  const feePercent = marketConfig.marketFeePercent || 0.05;
+  const fee = Math.floor(order.price * feePercent);
+  const sellerReceives = order.price - fee;
+
   removeCoins(buyerId, order.price);
-  addCoins(order.sellerId, order.price);
+  addCoins(order.sellerId, sellerReceives);
   if (!transferLockedEntry(order.sellerId, buyerId, order.entry)) {
     addCoins(buyerId, order.price);
-    removeCoins(order.sellerId, order.price);
+    removeCoins(order.sellerId, sellerReceives);
     return { ok: false, reason: "Falha ao transferir item. A compra foi revertida." };
   }
+
+  recordLedgerEvent("market_buy", {
+    userId: buyerId,
+    targetId: order.sellerId,
+    orderId,
+    itemKey: order.itemKey,
+    itemId: order.entry.itemId,
+    weaponId: order.entry.weaponId,
+    amount: getEntryAmount(order.entry),
+    grossAmount: order.price,
+    fee,
+    netAmount: sellerReceives
+  });
+  recordLedgerEvent("market_fee", {
+    userId: order.sellerId,
+    targetId: buyerId,
+    orderId,
+    itemKey: order.itemKey,
+    amount: fee,
+    grossAmount: order.price,
+    fee,
+    netAmount: sellerReceives
+  });
 
   order.status = "sold";
   order.buyerId = buyerId;
   order.soldAt = now();
-  db.orders = db.orders.filter((item) => item.id !== order.id);
   db.history.push({
     orderId: order.id,
     itemKey: order.itemKey,
@@ -184,8 +253,8 @@ function buyOrder(buyerId, orderId) {
     soldAt: order.soldAt
   });
   while (db.history.length > (marketConfig.historyLimit || 100)) db.history.shift();
-  writeJsonFileSync(config.paths.market, db); // Immediate sync save
-  saveMarket();
+  saveMarketSync(); // Immediate sync save
+  scheduleMarketSave();
   return { ok: true, order };
 }
 
@@ -209,7 +278,7 @@ function createTrade({ proposerId, targetId, entry, price }) {
     expiresAt: lockedEntry.lockedUntil
   };
   db.trades.push(trade);
-  saveMarket();
+  scheduleMarketSave();
   return { ok: true, trade };
 }
 
@@ -220,7 +289,7 @@ function acceptTrade(targetId, tradeId) {
   if (trade.expiresAt <= now()) {
     trade.status = "expired";
     unlockInventoryEntry(trade.proposerId, trade.entry);
-    saveMarket();
+    scheduleMarketSave();
     return { ok: false, reason: "Trade expirado." };
   }
   if (getCoins(targetId) < trade.price) return { ok: false, reason: "Saldo insuficiente para aceitar o trade." };
@@ -244,8 +313,61 @@ function acceptTrade(targetId, tradeId) {
     price: trade.price,
     soldAt: trade.acceptedAt
   });
-  saveMarket();
+  scheduleMarketSave();
   return { ok: true, trade };
+}
+
+function cancelOrder(ownerId, orderId) {
+  const order = db.orders.find((item) => item.id === orderId && item.status === "active");
+  if (!order) return { ok: false, reason: "Ordem não encontrada ou já concluída." };
+  if (order.sellerId !== ownerId) return { ok: false, reason: "Você não é dono desta ordem." };
+  
+  order.status = "cancelled";
+  order.cancelledAt = now();
+  unlockInventoryEntry(ownerId, order.entry);
+  saveMarketSync();
+  scheduleMarketSave();
+  
+  recordLedgerEvent("market_cancel_order", {
+    userId: ownerId,
+    orderId,
+    itemKey: order.itemKey,
+    itemId: order.entry.itemId,
+    weaponId: order.entry.weaponId,
+    amount: getEntryAmount(order.entry),
+    price: order.price
+  });
+  return { ok: true, order };
+}
+
+async function showMyOrders(interaction, ownerId) {
+  const orders = db.orders.filter(item => item.sellerId === ownerId && item.status === "active");
+  if (orders.length === 0) {
+    return interaction.update({ content: "📦 Você não tem nenhuma ordem ativa no momento.", embeds: [], components: marketRows(ownerId) });
+  }
+  
+  const { ActionRowBuilder, StringSelectMenuBuilder, EmbedBuilder } = require("discord.js");
+  
+  const embed = new EmbedBuilder()
+    .setColor("#38BDF8")
+    .setTitle("📦 Minhas Ordens Ativas")
+    .setDescription(orders.map((order) => {
+      const created = new Date(order.createdAt).toLocaleString("pt-BR");
+      return `\`${order.id}\` - ${describeEntry(order.entry)} | ${formatCoins(order.price)} NC | ${created} | ${order.status}`;
+    }).join("\n"));
+    
+  const row = new ActionRowBuilder().addComponents(
+    new StringSelectMenuBuilder()
+      .setCustomId(`market_cancel_pick_${ownerId}`)
+      .setPlaceholder("Escolha uma ordem para cancelar...")
+      .addOptions(orders.map((order) => ({
+        label: describeEntry(order.entry).slice(0, 100),
+        description: `Preço: ${formatCoins(order.price)} NC`.slice(0, 100),
+        value: order.id
+      })))
+  );
+  
+  return interaction.update({ content: "", embeds: [embed], components: [row, ...marketRows(ownerId)] });
 }
 
 function rejectTrade(userId, tradeId) {
@@ -254,14 +376,42 @@ function rejectTrade(userId, tradeId) {
   if (![trade.targetId, trade.proposerId].includes(userId)) return { ok: false, reason: "Você não faz parte deste trade." };
   trade.status = "rejected";
   unlockInventoryEntry(trade.proposerId, trade.entry);
-  saveMarket();
+  scheduleMarketSave();
   return { ok: true, trade };
 }
 
 function systemSell(userId, entry) {
-  const price = Math.floor(getSuggestedPrice(entry) * (marketConfig.systemSellPercent || 0.55));
+  if (!entry || !["item", "weapon"].includes(entry.kind)) return { ok: false, reason: "Item inválido." };
+  if (entry.kind === "item" && !isPositiveInteger(entry.amount || 1)) return { ok: false, reason: "Quantidade inválida." };
+
+  let price = 0;
+  if (entry.kind === "item") {
+    // Busca basePrice da configuração para o item/material
+    const BOOST_PRICES = config.static.shop.boosts || {};
+    const itemConf = BOOST_PRICES[entry.itemId] || {};
+    const baseP = itemConf.basePrice || itemConf.cost || getSuggestedPrice(entry);
+    const minP = itemConf.minPrice || itemConf.cost || baseP;
+    const maxP = itemConf.maxPrice || itemConf.cost || baseP;
+    
+    // Calcula valor dinâmico com trava anti-arbitragem
+    price = getSystemSellPrice(entry.itemId, baseP, minP, maxP);
+    // Venda em lote se houver amount
+    if (entry.amount && entry.amount > 1) {
+      price = price * entry.amount;
+    }
+  } else {
+    // Para armas ou itens sem estoque virtual
+    price = Math.floor(getSuggestedPrice(entry) * (marketConfig.systemSellPercent || 0.55));
+  }
+
   if (!lockInventoryEntry(userId, entry)) return { ok: false, reason: "Não consegui vender este item." };
-  transferLockedEntry(userId, "system", entry);
+  
+  if (entry.kind === "item") {
+    addStock(entry.itemId, entry.amount || 1, 50);
+  } else {
+    transferLockedEntry(userId, "system", entry);
+  }
+
   addCoins(userId, price);
   db.history.push({
     orderId: `sys_${now()}`,
@@ -272,7 +422,17 @@ function systemSell(userId, entry) {
     price,
     soldAt: now()
   });
-  saveMarket();
+  
+  recordLedgerEvent("system_sell", {
+    userId,
+    itemKey: entry.itemKey,
+    itemId: entry.itemId,
+    weaponId: entry.weaponId,
+    price,
+    amount: entry.amount || 1
+  });
+  
+  scheduleMarketSave();
   return { ok: true, price };
 }
 
@@ -286,6 +446,7 @@ function marketRows(ownerId) {
     ),
     new ActionRowBuilder().addComponents(
       new ButtonBuilder().setCustomId(`market_history_${ownerId}`).setLabel("Historico").setStyle(ButtonStyle.Secondary),
+      new ButtonBuilder().setCustomId(`market_myorders_${ownerId}`).setLabel("Minhas Ordens").setStyle(ButtonStyle.Primary),
       new ButtonBuilder().setCustomId(`market_shop_${ownerId}`).setLabel("Voltar p/ Loja").setStyle(ButtonStyle.Danger)
     )
   ];
@@ -398,6 +559,22 @@ async function handleMarketInteraction(interaction) {
         return true;
       }
       if (mode === "system") {
+        if (entry.kind === "item") {
+          const modal = new ModalBuilder()
+            .setCustomId(`market_sell_systemamount_${ownerId}_${entry.kind}_${entry.itemId}`)
+            .setTitle("Venda Instantânea (Sistema)")
+            .addComponents(new ActionRowBuilder().addComponents(
+              new TextInputBuilder()
+                .setCustomId("amount")
+                .setLabel(`Quantidade (Máximo: ${entry.available || 1})`)
+                .setStyle(TextInputStyle.Short)
+                .setValue("1")
+                .setRequired(true)
+            ));
+          await interaction.showModal(modal);
+          return true;
+        }
+
         const result = systemSell(ownerId, entry);
         await interaction.update({ content: result.ok ? `✅ Venda instantânea concluída por **${formatCoins(result.price)} NC**.` : `❌ ${result.reason}`, embeds: [], components: [] });
         return true;
@@ -405,14 +582,26 @@ async function handleMarketInteraction(interaction) {
 
       const modal = new ModalBuilder()
         .setCustomId(`market_sell_price_${ownerId}_${entry.kind}_${entry.kind === "weapon" ? entry.instanceId : entry.itemId}`)
-        .setTitle("Definir preço de venda")
+        .setTitle("Definir venda")
         .addComponents(new ActionRowBuilder().addComponents(
           new TextInputBuilder()
             .setCustomId("price")
-            .setLabel(`Preço sugerido: ${getSuggestedPrice(entry)} NC`)
+            .setLabel(`Preço (Sugerido: ${getSuggestedPrice(entry)} NC)`)
             .setStyle(TextInputStyle.Short)
             .setRequired(true)
         ));
+
+      if (entry.kind === "item") {
+        modal.addComponents(new ActionRowBuilder().addComponents(
+          new TextInputBuilder()
+            .setCustomId("amount")
+            .setLabel(`Quantidade (Máximo: ${entry.available || 1})`)
+            .setStyle(TextInputStyle.Short)
+            .setValue("1")
+            .setRequired(true)
+        ));
+      }
+      
       await interaction.showModal(modal);
       return true;
     }
@@ -454,6 +643,7 @@ async function handleMarketInteraction(interaction) {
     if (interaction.customId.startsWith("market_buy_")) return showBuy(interaction, ownerId);
     if (interaction.customId.startsWith("market_trade_")) return showTrade(interaction, ownerId);
     if (interaction.customId.startsWith("market_history_")) return showHistory(interaction, ownerId);
+    if (interaction.customId.startsWith("market_myorders_")) return showMyOrders(interaction, ownerId);
     
     if (interaction.customId.startsWith("market_shop_")) {
       const { handleBoostCommand } = require("./boosts");
@@ -493,6 +683,24 @@ async function handleMarketInteraction(interaction) {
       );
 
     await interaction.reply({ embeds: [embed], components: [row], flags: MessageFlags.Ephemeral });
+    return true;
+  }
+
+  if (interaction.isStringSelectMenu() && interaction.customId.startsWith("market_cancel_pick_")) {
+    const ownerId = interaction.customId.split("_")[3];
+    if (interaction.user.id !== ownerId) {
+      await interaction.reply({ content: "❌ Esta Bolsa foi aberta por outro jogador.", flags: MessageFlags.Ephemeral });
+      return true;
+    }
+    const orderId = interaction.values[0];
+    const result = cancelOrder(ownerId, orderId);
+    if (!result.ok) {
+      await interaction.reply({ content: `❌ ${result.reason}`, flags: MessageFlags.Ephemeral });
+    } else {
+      await interaction.reply({ content: `✅ Ordem cancelada! O item voltou para o seu inventário.`, flags: MessageFlags.Ephemeral });
+      // update the current message UI to remove the order from the list
+      return showMyOrders({ update: (p) => interaction.message.edit(p) }, ownerId);
+    }
     return true;
   }
 
@@ -554,14 +762,71 @@ async function handleMarketInteraction(interaction) {
       await interaction.reply({ content: "❌ Esta Bolsa foi aberta por outro jogador.", flags: MessageFlags.Ephemeral });
       return true;
     }
-    const price = parseInt(interaction.fields.getTextInputValue("price"), 10);
-    if (!Number.isFinite(price) || price <= 0) {
+    const rawPrice = interaction.fields.getTextInputValue("price").trim();
+    const price = Number(rawPrice);
+    if (!isPositiveInteger(price)) {
       await interaction.reply({ content: "Preço inválido.", flags: MessageFlags.Ephemeral });
       return true;
     }
     const entry = sellableEntries(ownerId).find((item) => kind === "weapon" ? item.instanceId === ref : item.itemId === ref);
-    const result = entry ? createOrder(ownerId, entry, price) : { ok: false, reason: "Item não encontrado." };
-    await interaction.reply({ content: result.ok ? `✅ Ordem criada: \`${result.order.id}\` por **${formatCoins(price)} NC**.` : `❌ ${result.reason}`, flags: MessageFlags.Ephemeral });
+    if (!entry) {
+      await interaction.reply({ content: "Item não encontrado.", flags: MessageFlags.Ephemeral });
+      return true;
+    }
+    
+    let amountToSell = 1;
+    if (kind === "item") {
+      try {
+        amountToSell = Number(interaction.fields.getTextInputValue("amount").trim());
+      } catch(e) {}
+      if (!isPositiveInteger(amountToSell) || amountToSell > (entry.available || 1)) {
+        await interaction.reply({ content: "Quantidade inválida.", flags: MessageFlags.Ephemeral });
+        return true;
+      }
+      entry.amount = amountToSell;
+    }
+
+    const result = createOrder(ownerId, entry, price);
+    const feePercent = marketConfig.marketFeePercent || 0.05;
+    const fee = Math.floor(price * feePercent);
+    await interaction.reply({
+      content: result.ok
+        ? `✅ Ordem criada: \`${result.order.id}\`\nPreço: **${formatCoins(price)} NC**\nTaxa da Bolsa: **${formatCoins(fee)} NC**\nVocê receberá: **${formatCoins(price - fee)} NC**`
+        : `❌ ${result.reason}`,
+      flags: MessageFlags.Ephemeral
+    });
+    return true;
+  }
+
+  if (interaction.isModalSubmit() && interaction.customId.startsWith("market_sell_systemamount_")) {
+    const parts = interaction.customId.split("_");
+    const ownerId = parts[3];
+    const kind = parts[4];
+    const ref = parts.slice(5).join("_");
+    if (interaction.user.id !== ownerId) {
+      await interaction.reply({ content: "❌ Esta Bolsa foi aberta por outro jogador.", flags: MessageFlags.Ephemeral });
+      return true;
+    }
+    const entry = sellableEntries(ownerId).find((item) => item.itemId === ref);
+    if (!entry) {
+      await interaction.reply({ content: "Item não encontrado.", flags: MessageFlags.Ephemeral });
+      return true;
+    }
+    
+    let amountToSell = 1;
+    try {
+      amountToSell = Number(interaction.fields.getTextInputValue("amount").trim());
+    } catch(e) {}
+    
+    if (!isPositiveInteger(amountToSell) || amountToSell > (entry.available || 1)) {
+      await interaction.reply({ content: "Quantidade inválida.", flags: MessageFlags.Ephemeral });
+      return true;
+    }
+    
+    entry.amount = amountToSell;
+    
+    const result = systemSell(ownerId, entry);
+    await interaction.reply({ content: result.ok ? `✅ Venda instantânea de ${amountToSell}x ${entry.itemId} concluída por **${formatCoins(result.price)} NC**.` : `❌ ${result.reason}`, flags: MessageFlags.Ephemeral });
     return true;
   }
 
@@ -614,12 +879,18 @@ module.exports = {
   acceptTrade,
   rejectTrade,
   systemSell,
+  getSuggestedPrice,
   getActiveOrders,
   sellableEntries,
+  cancelOrder,
+  showMyOrders,
   __setDbForTests(nextDb) {
     db = JSON.parse(JSON.stringify(nextDb));
   },
   __getDbForTests() {
     return JSON.parse(JSON.stringify(db));
+  },
+  __disableSavingForTests(value = true) {
+    disableSavingForTests = value;
   }
 };

@@ -1,4 +1,23 @@
 {
+  "combatBuff": {
+    "pedra_amolar": {
+      "duelPowerBonus": 2,
+      "durationFights": 1
+    },
+    "fragmento_mana": {
+      "duelPowerBonus": 5,
+      "durationFights": 1
+    },
+    "essencia_rara": {
+      "bossDamageBonus": 0.25,
+      "durationFights": 1
+    },
+    "nucleo_lendario": {
+      "bossDamageBonus": 0.5,
+      "duelPowerBonus": 10,
+      "durationFights": 1
+    }
+  },
   "boosts": {
     "game_2x": {
       "type": "game",
@@ -118,6 +137,122 @@
       "menuLabel": "Invocação de Mini Boss",
       "description": "Spawna o Mini Boss instantaneamente em todos canais! - 5k",
       "emoji": "👾"
+    },
+    "pedra_amolar": {
+      "type": "material",
+      "cost": 350,
+      "basePrice": 350,
+      "minPrice": 180,
+      "maxPrice": 900,
+      "targetStock": 60,
+      "repairValue": 5,
+      "allowedRarities": ["comum", "raro"],
+      "emoji": "🪨",
+      "label": "Pedra de Amolar",
+      "menuLabel": "Pedra de Amolar",
+      "description": "Recupera durabilidade de armas comuns e raras."
+    },
+    "fragmento_mana": {
+      "type": "material",
+      "cost": 900,
+      "basePrice": 900,
+      "minPrice": 450,
+      "maxPrice": 2200,
+      "targetStock": 30,
+      "repairValue": 7,
+      "allowedRarities": ["raro", "epico"],
+      "emoji": "🔮",
+      "label": "Fragmento de Mana",
+      "menuLabel": "Fragmento de Mana",
+      "description": "Recupera durabilidade de armas raras e épicas."
+    },
+    "essencia_rara": {
+      "type": "material",
+      "cost": 1800,
+      "basePrice": 1800,
+      "minPrice": 900,
+      "maxPrice": 4500,
+      "targetStock": 15,
+      "repairValue": 10,
+      "allowedRarities": ["epico", "lendario"],
+      "emoji": "✨",
+      "label": "Essência Rara",
+      "menuLabel": "Essência Rara",
+      "description": "Recupera durabilidade de armas épicas e lendárias."
+    },
+    "nucleo_lendario": {
+      "type": "material",
+      "cost": 6000,
+      "basePrice": 6000,
+      "minPrice": 3000,
+      "maxPrice": 15000,
+      "targetStock": 5,
+      "repairValue": 15,
+      "allowedRarities": ["lendario"],
+      "emoji": "🌟",
+      "label": "Núcleo Lendário",
+      "menuLabel": "Núcleo Lendário",
+      "description": "Recupera durabilidade de armas lendárias."
+    },
+    "estandarte_guerra": {
+      "type": "raid_consumable",
+      "side": "attack",
+      "cost": 1200,
+      "label": "Estandarte de Guerra",
+      "menuLabel": "Estandarte de Guerra",
+      "description": "Aumenta em 5% a chance geral de sucesso da Raid atual.",
+      "emoji": "🚩",
+      "effect": { "attackChanceBonus": 0.05 }
+    },
+    "mapa_tesouro": {
+      "type": "raid_consumable",
+      "side": "attack",
+      "cost": 1800,
+      "label": "Mapa do Tesouro",
+      "menuLabel": "Mapa do Tesouro",
+      "description": "Permite atingir até 5 alvos adicionais na Raid atual.",
+      "emoji": "🗺️",
+      "effect": { "maxTargetsBonus": 5 }
+    },
+    "ariete": {
+      "type": "raid_consumable",
+      "side": "attack",
+      "cost": 2500,
+      "label": "Aríete",
+      "menuLabel": "Aríete",
+      "description": "Reduz parte do bônus defensivo do servidor alvo.",
+      "emoji": "🪵",
+      "effect": { "defenseReduction": 0.08 }
+    },
+    "escudo_servidor": {
+      "type": "raid_consumable",
+      "side": "defense",
+      "cost": 2000,
+      "label": "Escudo do Servidor",
+      "menuLabel": "Escudo do Servidor",
+      "description": "Aumenta em 10% a resistência contra a Raid atual.",
+      "emoji": "🛡️",
+      "effect": { "defenseChanceBonus": 0.10 }
+    },
+    "cofre_reforcado": {
+      "type": "raid_consumable",
+      "side": "defense",
+      "cost": 3000,
+      "label": "Cofre Reforçado",
+      "menuLabel": "Cofre Reforçado",
+      "description": "Reduz em 30% o limite máximo de perda por usuário durante a Raid.",
+      "emoji": "🏦",
+      "effect": { "maxLossReduction": 0.30 }
+    },
+    "sentinela": {
+      "type": "raid_consumable",
+      "side": "defense",
+      "cost": 1500,
+      "label": "Sentinela",
+      "menuLabel": "Sentinela",
+      "description": "Mostra uma estimativa da força ofensiva da Raid inimiga.",
+      "emoji": "👁️",
+      "effect": { "revealAttackPower": true }
     }
   },
   "menuOrder": [
@@ -133,6 +268,10 @@
     "escudo_espinhos",
     "acido_corrosivo",
     "invocar_miniboss",
-    "invocar_boss"
+    "invocar_boss",
+    "pedra_amolar",
+    "fragmento_mana",
+    "essencia_rara",
+    "nucleo_lendario"
   ]
 }

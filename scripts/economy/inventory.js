@@ -24,9 +24,19 @@ function carregarInventario() {
 
 const salvarInventario = createDebouncedJsonWriter(INVENTORY_PATH, () => db, config.static.app.timers.saveDebounceMs);
 const { writeJsonFileSync } = require("../core/storage");
+let disableSavingForTests = false;
 
 function salvarInventarioSync() {
+  if (disableSavingForTests) return;
   writeJsonFileSync(INVENTORY_PATH, db);
+}
+
+function scheduleInventarioSave() {
+  if (!disableSavingForTests) salvarInventario();
+}
+
+function isPositiveIntegerAmount(amount) {
+  return Number.isInteger(amount) && amount > 0;
 }
 
 function ensureUser(userId) {
@@ -58,30 +68,34 @@ function ensureUser(userId) {
 }
 
 function addItem(userId, itemId, amount = 1) {
+  if (!isPositiveIntegerAmount(amount)) return false;
   ensureUser(userId);
   if (!db[userId].items[itemId]) {
     db[userId].items[itemId] = 0;
   }
   db[userId].items[itemId] += amount;
-  salvarInventario();
+  salvarInventarioSync();
+  return true;
 }
 
 function removeItem(userId, itemId, amount = 1) {
+  if (!isPositiveIntegerAmount(amount)) return false;
   ensureUser(userId);
-  if (db[userId].items[itemId]) {
+  if ((db[userId].items[itemId] || 0) >= amount) {
     db[userId].items[itemId] -= amount;
     if (db[userId].items[itemId] <= 0) {
       delete db[userId].items[itemId];
     }
-    salvarInventario();
+    salvarInventarioSync();
     return true;
   }
   return false;
 }
 
-function hasItem(userId, itemId) {
+function hasItem(userId, itemId, amount = 1) {
+  if (!isPositiveIntegerAmount(amount)) return false;
   ensureUser(userId);
-  return db[userId].items[itemId] > 0;
+  return (db[userId].items[itemId] || 0) >= amount;
 }
 
 function getUserInventory(userId) {
@@ -101,7 +115,7 @@ function addWeaponInstance(userId, weaponInstance) {
   if (!db[userId].equippedWeaponId) {
     db[userId].equippedWeaponId = weaponInstance.instanceId;
   }
-  salvarInventario();
+  scheduleInventarioSave();
   return weaponInstance;
 }
 
@@ -118,7 +132,7 @@ function updateWeaponInstance(userId, instanceId, updater) {
   } else {
     db[userId].weapons[index] = next;
   }
-  salvarInventario();
+  scheduleInventarioSave();
   return next;
 }
 
@@ -132,14 +146,14 @@ function setEquippedWeapon(userId, instanceId) {
     return false;
   }
   db[userId].equippedWeaponId = instanceId;
-  salvarInventario();
+  scheduleInventarioSave();
   return true;
 }
 
 function lockInventoryEntry(userId, entry) {
   ensureUser(userId);
   if (entry.kind === "item") {
-    if (!hasItem(userId, entry.itemId)) return false;
+    if (!hasItem(userId, entry.itemId, entry.amount || 1)) return false;
     removeItem(userId, entry.itemId, entry.amount || 1);
     salvarInventarioSync();
     return true;
@@ -209,7 +223,7 @@ function canClaimSmokeBomb(userId) {
 function updateSmokeBombTimer(userId) {
   ensureUser(userId);
   db[userId].lastSmokeBomb = Date.now();
-  salvarInventario();
+  scheduleInventarioSave();
 }
 
 // Roleta Diária
@@ -229,7 +243,7 @@ async function handleDailyCommand(message) {
   }
 
   db[userId].lastDaily = now;
-  salvarInventario();
+  scheduleInventarioSave();
 
   const rng = Math.random();
   let rewardText = "";
@@ -299,5 +313,8 @@ module.exports = {
   },
   __getDbForTests() {
     return JSON.parse(JSON.stringify(db));
+  },
+  __disableSavingForTests(value = true) {
+    disableSavingForTests = value;
   }
 };

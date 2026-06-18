@@ -123,12 +123,18 @@
         "a massive shadow behemoth emerging from the ground, glowing red eyes, dark fantasy, highly detailed",
         "a colossal armored titan wielding a giant axe, intense battle scene, fantasy concept art, masterpiece",
         "a gigantic spectral leviathan floating in the sky, ethereal lighting, epic fantasy art, 8k resolution"
-      ]
+      ],
+      "materialDrops": {
+        "pedra_amolar": { "weight": 30, "min": 2, "max": 5 },
+        "fragmento_mana": { "weight": 25, "min": 1, "max": 3 },
+        "essencia_rara": { "weight": 15, "min": 1, "max": 2 },
+        "nucleo_lendario": { "weight": 5, "min": 1, "max": 1 }
+      }
     },
     "mini": {
       "id": "mini",
       "name": "Mini Boss",
-      "hp": 10000,
+      "hp": 5000,
       "prize": 5000,
       "expireMs": 600000,
       "prompt": [
@@ -137,7 +143,12 @@
         "a corrupt forest dryad corrupted by dark magic, glowing purple aura, fantasy concept art, high quality",
         "a heavily armored skeleton knight with a glowing blue sword, dungeon setting, epic fantasy art",
         "a vicious two-headed hellhound covered in chains, fiery background, digital illustration, highly detailed"
-      ]
+      ],
+      "materialDrops": {
+        "pedra_amolar": { "weight": 40, "min": 1, "max": 3 },
+        "fragmento_mana": { "weight": 20, "min": 1, "max": 2 },
+        "essencia_rara": { "weight": 8, "min": 1, "max": 1 }
+      }
     },
     "actions": {
       "basic": {
@@ -210,9 +221,32 @@
     "orderExpireMs": 86400000,
     "historyLimit": 100,
     "systemSellPercent": 0.55,
+    "marketFeePercent": 0.05,
     "suggestedPriceFloor": 0.5,
     "suggestedPriceCeil": 2.5,
     "maxActiveOrdersPerUser": 10
+  },
+  "raid": {
+    "minStake": 2000,
+    "attackCooldownMs": 43200000,
+    "defenderShieldMs": 21600000,
+    "lobbyDurationMs": 180000,
+    "activeDurationMs": 300000,
+    "minParticipants": 2,
+    "protectedBalance": 500,
+    "maxLossPercentPerUser": 0.08,
+    "maxLossFlatPerUser": 500,
+    "baseStealChance": 0.35,
+    "attackerBonusPerParticipant": 0.02,
+    "attackerBonusMax": 0.2,
+    "defenderBonusPerParticipant": 0.03,
+    "defenderBonusMax": 0.3,
+    "minStealChance": 0.05,
+    "maxStealChance": 0.75,
+    "maxTargetsPerRaid": 20,
+    "warTaxPercent": 0.1,
+    "maxItemsPerUserPerRaid": 1,
+    "participantCooldownMs": 10800000
   },
   "daily": {
     "cooldownMs": 86400000,

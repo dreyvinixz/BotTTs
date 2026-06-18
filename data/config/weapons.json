@@ -5,6 +5,51 @@
     "epico": { "label": "Epico", "color": "#EC4899", "priceMultiplier": 4.2 },
     "lendario": { "label": "Lendario", "color": "#FACC15", "priceMultiplier": 8 }
   },
+  "fortify": {
+    "maxLevel": 5,
+    "successChance": [0.9, 0.75, 0.55, 0.35, 0.2],
+    "bonusPerLevel": {
+      "bossDamage": 0.05,
+      "duelPower": 0.05
+    },
+    "materialCost": {
+      "comum": { "materialId": "pedra_amolar", "amount": 2 },
+      "raro": { "materialId": "fragmento_mana", "amount": 3 },
+      "epico": { "materialId": "essencia_rara", "amount": 4 },
+      "lendario": { "materialId": "nucleo_lendario", "amount": 6 }
+    },
+    "failurePenalty": "consumeMaterial"
+  },
+  "crafting": {
+    "espada_madeira": {
+      "cost": 300,
+      "materials": [
+        { "materialId": "pedra_amolar", "amount": 5 }
+      ]
+    },
+    "arco_cacador": {
+      "cost": 1200,
+      "materials": [
+        { "materialId": "pedra_amolar", "amount": 8 },
+        { "materialId": "fragmento_mana", "amount": 2 }
+      ]
+    },
+    "machado_trovao": {
+      "cost": 3000,
+      "materials": [
+        { "materialId": "fragmento_mana", "amount": 6 },
+        { "materialId": "essencia_rara", "amount": 2 }
+      ]
+    }
+  },
+  "legendaryReroll": {
+    "materialId": "nucleo_lendario",
+    "amountPerReroll": 3,
+    "chanceRange": {
+      "min": 0.15,
+      "max": 0.40
+    }
+  },
   "classes": {
     "espada": { "label": "Espadas" },
     "machado": { "label": "Machados" },

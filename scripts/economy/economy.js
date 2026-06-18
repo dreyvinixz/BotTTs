@@ -68,6 +68,10 @@ function getTopPlayers(limit = 10) {
     .map(([id, balance]) => ({ id, balance }));
 }
 
+function getAllBalances() {
+  return { ...db };
+}
+
 async function handleDoarCommand(message, text) {
   const userId = message.author.id;
   const args = text.split(/\s+/);
@@ -149,6 +153,7 @@ module.exports = {
   getCoins,
   addCoins,
   removeCoins,
+  getAllBalances,
   getTopPlayers,
   handleDoarCommand,
   formatCoins,

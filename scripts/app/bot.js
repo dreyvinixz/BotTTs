@@ -22,6 +22,7 @@ const { handleRoubarCommand, handleButtonInteraction, handleTimeoutCommand, hand
 const { handleRpgInteraction } = require("../games/rpg");
 const { handleBoostCommand, handleBoostInteraction } = require("../economy/boosts");
 const { handleMarketCommand, handleMarketInteraction } = require("../economy/market");
+const { handleRaidCommand, handleRaidInteraction, scheduleExistingRaids } = require("../economy/raids");
 const { handleInventoryCommand, handleEquipWeaponCommand } = require("../economy/weapons");
 const { checkAndSendTip } = require("../features/tips");
 const { handleAdminCommand } = require("../admin/admin");
@@ -50,6 +51,7 @@ function buildHelpEmbed() {
         '`!doar <@user> <valor>` - 💸 Transfere Nanacoins simples.',
         '`!loja` - 🏪 Abre o hub de boosts, itens e armas equipáveis.',
         '`!bolsa` - 📈 Central de Negócios: compre, venda ou faça trade de itens/armas!',
+        '`!raid` - ⚔️ Raid de Servidores: guerra econômica controlada.',
         '`!inventario` / `!inv` - 🎒 Mostra seus itens e permite **equipar suas armas** interativamente.'
       ].join('\n') },
       { name: '⚔️ Crime & Duelo', value: [
@@ -302,6 +304,10 @@ async function handleMessage(message) {
     return handleMarketCommand(message);
   }
 
+  if (isCommand(message, ["!raid"])) {
+    return handleRaidCommand(message, getCommandText(message, ["!raid"]));
+  }
+
   if (isCommand(message, ["!inventario", "!inv"])) {
     return handleInventoryCommand(message);
   }
@@ -401,24 +407,41 @@ async function handleMessage(message) {
   return maybeResponderEspontaneo(message);
 }
 
-function start() {
+function start(options = {}) {
+  const testMode = options.testMode === true;
+  const testChannelId = config.static.app.test?.channelId;
   const client = createClient();
+  client.botTtsTestMode = testMode;
+  client.botTtsTestChannelId = testChannelId;
 
   client.once("clientReady", () => {
     console.log(`✅ Bot logado como ${client.user.tag}`);
+    if (testMode) {
+      console.log(`🧪 Modo teste ativo. Respondendo apenas no canal ${testChannelId}.`);
+    }
+    scheduleExistingRaids(client);
   });
 
   client.on("messageCreate", (message) => {
+    if (testMode && message.channelId !== testChannelId) return;
     handleMessage(message).catch((err) => {
       console.error("🔥 Erro inesperado no messageCreate:", err);
     });
   });
   client.on("interactionCreate", async (interaction) => {
     try {
+      if (testMode && interaction.channelId !== testChannelId) {
+        if (interaction.isRepliable?.()) {
+          await interaction.reply({ content: "🧪 Este bot de teste só responde no canal de testes.", ephemeral: true }).catch(() => null);
+        }
+        return;
+      }
+
       if (await handleEventInteraction(interaction)) return;
       if (await handleForcaThemeInteraction(interaction)) return;
       
       if (await handleMarketInteraction(interaction)) return;
+      if (await handleRaidInteraction(interaction)) return;
 
       if (
         interaction.customId?.startsWith('boost_select_')
@@ -431,6 +454,9 @@ function start() {
 
       const { handleInventoryInteraction } = require("../economy/weapons");
       if (await handleInventoryInteraction(interaction)) return;
+
+      const { handleForgeInteraction } = require("../economy/forge");
+      if (await handleForgeInteraction(interaction)) return;
 
       const { handleBossInteraction } = require("../games/boss");
       if (await handleBossInteraction(interaction)) return;

@@ -1,5 +1,7 @@
 const { ActionRowBuilder, ButtonBuilder, ButtonStyle, MessageFlags, StringSelectMenuBuilder } = require("discord.js");
 const config = require("../core/config");
+const { getDynamicPrice, removeStock, getItemStockInfo } = require("./shopStock");
+const { recordLedgerEvent } = require("./ledger");
 const { getCoins, addCoins, removeCoins, formatCoins } = require("./economy");
 const { listWeaponDefs, grantWeapon, formatWeaponLabel } = require("./weapons");
 
@@ -90,15 +92,25 @@ function boostOptions(category) {
   return BOOST_MENU_ORDER
     .filter((key) => {
       const item = BOOST_PRICES[key];
-      if (category === "items") return ["item", "freeItem", "spawnBoss", "spawnMiniBoss"].includes(item.type);
-      if (category === "boosts") return !["item", "freeItem", "spawnBoss", "spawnMiniBoss"].includes(item.type);
+      if (category === "items") return ["item", "freeItem", "spawnBoss", "spawnMiniBoss", "material"].includes(item.type);
+      if (category === "boosts") return !["item", "freeItem", "spawnBoss", "spawnMiniBoss", "material"].includes(item.type);
       return true;
     })
     .map((key) => {
       const item = BOOST_PRICES[key];
+      let dynPrice = item.cost;
+      let stockIndicator = "";
+      
+      if (item.type === "material" || item.type === "item") {
+        dynPrice = getDynamicPrice(key, item.basePrice || item.cost, item.minPrice || item.cost, item.maxPrice || item.cost);
+        const stockInfo = getItemStockInfo(key, item.targetStock || 50);
+        if (stockInfo.stock < stockInfo.targetStock * 0.5) stockIndicator = " 📉 Baixo Estoque";
+        else if (stockInfo.stock > stockInfo.targetStock * 1.5) stockIndicator = " 📈 Promoção";
+      }
+
       return {
         label: item.menuLabel || item.label,
-        description: item.description,
+        description: `${formatCoins(dynPrice)} NC${stockIndicator} - ${item.description}`.slice(0, 100),
         value: key,
         emoji: item.emoji
       };
@@ -127,12 +139,20 @@ function buildWeaponSelect(ownerId, rarity = "all") {
     new StringSelectMenuBuilder()
       .setCustomId(`weapon_select_${ownerId}`)
       .setPlaceholder("Escolha uma arma para comprar...")
-      .addOptions(weapons.map((weapon) => ({
-        label: `${weapon.name} (${weapon.rarity})`.slice(0, 100),
-        description: `${formatCoins(weapon.basePrice)} NC | ${weapon.durability} usos | Dano boss +${weapon.bossDamage}`.slice(0, 100),
-        value: weapon.id,
-        emoji: rarityEmojis[weapon.rarity] || "🔹"
-      })))
+      .addOptions(weapons.map((weapon) => {
+        const dynPrice = getDynamicPrice(weapon.id, weapon.basePrice, weapon.basePrice * 0.5, weapon.basePrice * 2.5);
+        const stockInfo = getItemStockInfo(weapon.id, 5);
+        let stockIndicator = "";
+        if (stockInfo.stock < stockInfo.targetStock * 0.5) stockIndicator = " 📉 Baixo Estoque";
+        else if (stockInfo.stock > stockInfo.targetStock * 1.5) stockIndicator = " 📈 Promoção";
+
+        return {
+          label: `${weapon.name} (${weapon.rarity})`.slice(0, 100),
+          description: `${formatCoins(dynPrice)} NC${stockIndicator} | ${weapon.durability} usos | Dano boss +${weapon.bossDamage}`.slice(0, 100),
+          value: weapon.id,
+          emoji: rarityEmojis[weapon.rarity] || "🔹"
+        };
+      }))
   );
 }
 
@@ -209,12 +229,15 @@ async function handleBoostInteraction(interaction) {
     const weapon = listWeaponDefs().find((item) => item.id === weaponId);
     if (!weapon) return interaction.reply({ content: "Arma inválida.", flags: MessageFlags.Ephemeral });
     const balance = getCoins(interaction.user.id);
-    if (balance < weapon.basePrice) {
-      return interaction.reply({ content: `❌ Você precisa de **${formatCoins(weapon.basePrice)} NC** para comprar ${weapon.name}.`, flags: MessageFlags.Ephemeral });
+    const dynPrice = getDynamicPrice(weaponId, weapon.basePrice, weapon.basePrice * 0.5, weapon.basePrice * 2.5);
+    if (balance < dynPrice) {
+      return interaction.reply({ content: `❌ Você precisa de **${formatCoins(dynPrice)} NC** para comprar ${weapon.name}.`, flags: MessageFlags.Ephemeral });
     }
-    removeCoins(interaction.user.id, weapon.basePrice);
+    removeCoins(interaction.user.id, dynPrice);
+    removeStock(weaponId, 1, 5);
+    recordLedgerEvent("shop_buy", { userId: interaction.user.id, itemId: weaponId, price: dynPrice, amount: 1 });
     const instance = grantWeapon(interaction.user.id, weaponId);
-    return interaction.reply({ content: `✅ Você comprou **${weapon.name}** por ${formatCoins(weapon.basePrice)} NC. ID: \`${instance.instanceId}\``, flags: MessageFlags.Ephemeral });
+    return interaction.reply({ content: `✅ Você comprou **${weapon.name}** por ${formatCoins(dynPrice)} NC. ID: \`${instance.instanceId}\``, flags: MessageFlags.Ephemeral });
   }
 
   if (!interaction.isStringSelectMenu() || !interaction.customId.startsWith('boost_select_')) return false;
@@ -243,16 +266,25 @@ async function handleBoostInteraction(interaction) {
     return interaction.reply({ content: `✅ **SUCESSO!** Você resgatou uma **Bomba de Fumaça 💨** gratuita! Use-a com sabedoria.`, flags: MessageFlags.Ephemeral });
   }
 
+  let dynPrice = boostConfig.cost;
+  if (boostConfig.type === "material" || boostConfig.type === "item") {
+    dynPrice = getDynamicPrice(choice, boostConfig.basePrice || boostConfig.cost, boostConfig.minPrice || boostConfig.cost, boostConfig.maxPrice || boostConfig.cost);
+  }
+
   const myCoins = getCoins(userId);
-  if (myCoins < boostConfig.cost) {
+  if (myCoins < dynPrice) {
     return interaction.reply({ 
-      content: `❌ Fundos insuficientes! Você precisa de **${formatCoins(boostConfig.cost)} Nanacoins 🪙** para comprar "${boostConfig.label}". (Seu saldo: ${formatCoins(myCoins)})`, 
+      content: `❌ Fundos insuficientes! Você precisa de **${formatCoins(dynPrice)} Nanacoins 🪙** para comprar "${boostConfig.label}". (Seu saldo: ${formatCoins(myCoins)})`, 
       flags: MessageFlags.Ephemeral 
     });
   }
 
-  // Desconta as moedas
-  removeCoins(userId, boostConfig.cost);
+  removeCoins(userId, dynPrice);
+  
+  if (boostConfig.type === 'item' || boostConfig.type === 'material') {
+    removeStock(choice, 1, boostConfig.targetStock || 50);
+  }
+  recordLedgerEvent("shop_buy", { userId, itemId: choice, price: dynPrice, amount: 1 });
 
   // Aplica o boost na memória ou adiciona item
   if (boostConfig.type === 'game') {
@@ -269,7 +301,7 @@ async function handleBoostInteraction(interaction) {
     peCabraBoosts.set(userId, Date.now() + boostConfig.durationMs);
   } else if (boostConfig.type === 'buff' && boostConfig.buff === 'escudoEspinhos') {
     escudoBoosts.set(userId, Date.now() + boostConfig.durationMs);
-  } else if (boostConfig.type === 'item') {
+  } else if (boostConfig.type === 'item' || boostConfig.type === 'material') {
     const { addItem } = require("./inventory");
     addItem(userId, choice, 1);
   } else if (boostConfig.type === 'spawnBoss' || boostConfig.type === 'spawnMiniBoss') {

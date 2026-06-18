@@ -163,6 +163,11 @@ async function finishBoss(interaction, boss) {
   if (boss.timerId) clearTimeout(boss.timerId);
   activeBosses.delete(interaction.message.id);
 
+  const { decrementBuff } = require("../economy/activeEffects");
+  for (const userId of boss.damageDealt.keys()) {
+    decrementBuff(userId, "boss");
+  }
+
   const prizes = computeBossPrizes(
     boss.damageDealt,
     boss.prize,
@@ -171,10 +176,38 @@ async function finishBoss(interaction, boss) {
     bossConfig.minimumDamageForPrize || 1
   );
 
+  const { getBossTypeConfig } = require("./bossRules");
+  const { addItem } = require("../economy/inventory");
+  const { weightedChoice } = require("../core/random");
+  const { recordLedgerEvent } = require("../economy/ledger");
+
+  const typeConfig = getBossTypeConfig(boss.type);
+  const drops = typeConfig?.materialDrops;
+
   let text = `🏆 **${boss.name.toUpperCase()} DERROTADO!** 🏆\nO premio de **${boss.prize} Nanacoins** foi dividido:\n\n`;
   for (const prize of prizes) {
     addCoins(prize.userId, prize.prize);
-    text += `#${prize.rank} <@${prize.userId}>: ${prize.damage} dano, ganhou **${prize.prize} 🪙**\n`;
+    
+    let dropText = "";
+    if (drops) {
+      const candidates = Object.entries(drops).map(([id, cfg]) => ({ id, ...cfg }));
+      const selected = weightedChoice(candidates);
+      if (selected) {
+        const amount = Math.floor(Math.random() * (selected.max - selected.min + 1)) + selected.min;
+        addItem(prize.userId, selected.id, amount);
+        dropText = ` + **${amount}x ${selected.id}** 🎁`;
+        recordLedgerEvent("boss_material_drop", {
+          userId: prize.userId,
+          bossType: boss.type,
+          materialId: selected.id,
+          amount,
+          rank: prize.rank,
+          damage: prize.damage
+        });
+      }
+    }
+
+    text += `#${prize.rank} <@${prize.userId}>: ${prize.damage} dano, ganhou **${prize.prize} 🪙**${dropText}\n`;
   }
 
   if (prizes.length === 0) text += "Ninguem atingiu dano minimo para receber premio.";
@@ -208,6 +241,13 @@ async function handleBossInteraction(interaction) {
   const phase = getBossPhase(boss.hp, boss.maxHp);
   const equippedWeapon = getEquippedWeapon(userId);
   const weaponResult = computeBossWeaponDamage(equippedWeapon, phase, action);
+  
+  const { getActiveBuff } = require("../economy/activeEffects");
+  const buff = getActiveBuff(userId, "boss");
+  if (buff?.bossDamageBonus) {
+    weaponResult.damage += weaponResult.damage * buff.bossDamageBonus;
+  }
+
   const charge = boss.charges.get(userId) || 1;
   const attack = computeBossAttackDamage({
     actionId,
@@ -244,5 +284,6 @@ module.exports = {
   spawnWorldBoss: (channels) => spawnBoss(channels, "world"),
   spawnMiniBoss: (channels) => spawnBoss(channels, "mini"),
   handleBossInteraction,
+  finishBoss,
   activeBosses
 };

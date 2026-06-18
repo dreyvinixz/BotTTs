@@ -426,10 +426,18 @@ async function handleButtonInteraction(interaction) {
       }
     }
 
+    const { getActiveBuff, decrementBuff } = require("../economy/activeEffects");
+
     const p1Weapon = getEquippedWeapon(duel.p1.id);
     const p2Weapon = getEquippedWeapon(duel.p2.id);
     const p1WeaponMod = computeDuelWeaponModifier(p1Weapon, duel.p2.choice);
     const p2WeaponMod = computeDuelWeaponModifier(p2Weapon, duel.p1.choice);
+
+    const p1Buff = getActiveBuff(duel.p1.id, "duel");
+    const p2Buff = getActiveBuff(duel.p2.id, "duel");
+
+    if (p1Buff?.duelPowerBonus) p1WeaponMod.power += p1Buff.duelPowerBonus;
+    if (p2Buff?.duelPowerBonus) p2WeaponMod.power += p2Buff.duelPowerBonus;
 
     let duelResult;
     if (p1WeaponMod.piercesDefense && duel.p2.choice === "Defesa") {
@@ -447,6 +455,10 @@ async function handleButtonInteraction(interaction) {
 
     if (p1Weapon && p1WeaponMod.durabilityCost) consumeWeaponDurability(duel.p1.id, p1Weapon.instanceId, p1WeaponMod.durabilityCost);
     if (p2Weapon && p2WeaponMod.durabilityCost) consumeWeaponDurability(duel.p2.id, p2Weapon.instanceId, p2WeaponMod.durabilityCost);
+    
+    if (p1Buff) decrementBuff(duel.p1.id, "duel");
+    if (p2Buff) decrementBuff(duel.p2.id, "duel");
+
     const winner = duelResult.winner || "Empate";
     const reason = duelResult.reason;
 

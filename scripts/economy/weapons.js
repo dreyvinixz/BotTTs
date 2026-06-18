@@ -29,6 +29,7 @@ function createWeaponInstance(weaponId, now = Date.now()) {
     instanceId: `wpn_${now}_${Math.floor(Math.random() * 100000)}`,
     weaponId,
     durabilityLeft: def.durability,
+    fortifyLevel: 0,
     createdAt: now
   };
 }
@@ -75,21 +76,33 @@ function consumeWeaponDurability(userId, instanceId, amount = 1) {
   return updated;
 }
 
-function rollLegendaryAbility(def, context = {}, rng = Math.random) {
+function rollLegendaryAbility(weaponInstanceOrDef, context = {}, rng = Math.random) {
+  const def = weaponInstanceOrDef.def || weaponInstanceOrDef;
   if (def?.rarity !== "lendario" || !def.ability) return null;
-  const chance = Number(def.ability.chance) || 0;
+  
+  // Reroll chance from instance if it exists, otherwise base from def
+  const chance = weaponInstanceOrDef.abilityChance !== undefined 
+    ? Number(weaponInstanceOrDef.abilityChance) 
+    : (Number(def.ability.chance) || 0);
+    
   return rng() < chance ? def.ability : null;
 }
 
 function computeBossWeaponDamage(weapon, phase, actionConfig, rng = Math.random) {
   if (!weapon?.def) return { damage: 0, ability: null, durabilityCost: 0 };
   let damage = Number(weapon.def.bossDamage) || 0;
+  
+  // Apply fortify bonus
+  if (weapon.fortifyLevel && weaponData.fortify?.bonusPerLevel?.bossDamage) {
+    damage *= (1 + (weapon.fortifyLevel * weaponData.fortify.bonusPerLevel.bossDamage));
+  }
+  
   damage *= Number(actionConfig.weaponMultiplier) || 1;
 
   if (phase?.weakness === weapon.def.class) damage *= phase.weaknessMultiplier || 1;
   if (phase?.resistance === weapon.def.class) damage *= phase.resistanceMultiplier || 1;
 
-  const ability = rollLegendaryAbility(weapon.def, { phase }, rng);
+  const ability = rollLegendaryAbility(weapon, { phase }, rng);
   if (ability?.bossFinalPhaseMultiplier && phase?.id === "final") {
     damage *= ability.bossFinalPhaseMultiplier;
   }
@@ -106,11 +119,20 @@ function computeDuelWeaponModifier(weapon, opponentChoice, rng = Math.random) {
     return { power: 0, piercesDefense: false, piercesParrudo: false, ability: null, durabilityCost: 0 };
   }
 
-  const ability = rollLegendaryAbility(weapon.def, { opponentChoice }, rng);
+  let power = weapon.def.duelPower || 0;
+  
+  // Apply fortify bonus
+  if (weapon.fortifyLevel && weaponData.fortify?.bonusPerLevel?.duelPower) {
+    power *= (1 + (weapon.fortifyLevel * weaponData.fortify.bonusPerLevel.duelPower));
+  }
+  
+  power = Math.floor(power);
+
+  const ability = rollLegendaryAbility(weapon, { opponentChoice }, rng);
   const pierceDefenseChance = (weapon.def.pierceDefenseChance || 0) + (ability?.duelPierceBonus || 0);
 
   return {
-    power: weapon.def.duelPower || 0,
+    power,
     piercesDefense: opponentChoice === "Defesa" && rng() < pierceDefenseChance,
     piercesParrudo: rng() < (weapon.def.pierceParrudoChance || 0),
     ability,
@@ -124,7 +146,8 @@ function formatWeaponLabel(instanceOrDef) {
   const durability = instanceOrDef.durabilityLeft !== undefined
     ? ` (${instanceOrDef.durabilityLeft}/${def.durability} usos)`
     : "";
-  return `${def.name} [${rarity}]${durability}`;
+  const fortify = instanceOrDef.fortifyLevel ? ` +${instanceOrDef.fortifyLevel}` : "";
+  return `${def.name}${fortify} [${rarity}]${durability}`;
 }
 
 async function handleEquipWeaponCommand(message, text) {
@@ -172,8 +195,14 @@ async function handleInventoryCommand(message) {
   const unequippedWeapons = inventory.weapons.filter(w => !w.lockedUntil && w.instanceId !== inventory.equippedWeaponId);
   const components = [];
 
+  const { ActionRowBuilder, StringSelectMenuBuilder, ButtonBuilder, ButtonStyle } = require("discord.js");
+
+  const forgeRow = new ActionRowBuilder().addComponents(
+    new ButtonBuilder().setCustomId(`open_forge_menu`).setLabel("⚒️ Forja / Reparo").setStyle(ButtonStyle.Primary)
+  );
+  components.push(forgeRow);
+
   if (unequippedWeapons.length > 0) {
-    const { ActionRowBuilder, StringSelectMenuBuilder } = require("discord.js");
     const row = new ActionRowBuilder().addComponents(
       new StringSelectMenuBuilder()
         .setCustomId(`inv_equip_${message.author?.id || message.user?.id}`)
