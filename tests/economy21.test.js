@@ -5,6 +5,7 @@ const economy = require("../scripts/economy/economy");
 const inventory = require("../scripts/economy/inventory");
 const weapons = require("../scripts/economy/weapons");
 const ledger = require("../scripts/economy/ledger");
+const config = require("../scripts/core/config");
 const activeEffects = require("../scripts/economy/activeEffects");
 const {
   fortifyWeapon,
@@ -93,7 +94,7 @@ test("combat buffs are persisted by category and expire after category use", () 
 
 test("crafting consumes coins and materials and creates an unfortified weapon", () => {
   economy.__disableSavingForTests(true);
-  economy.__setDbForTests({ crafter: 1000 });
+  economy.__setDbForTests({ crafter: 1000, legendaryCrafter: 20000 });
   inventory.__setDbForTests({});
   ledger.__setLedgerForTests([]);
 
@@ -107,7 +108,39 @@ test("crafting consumes coins and materials and creates an unfortified weapon", 
   assert.equal(inventory.__getDbForTests().crafter.weapons[0].fortifyLevel, 0);
   assert.equal(ledger.__getLedgerForTests().at(-1).type, "craft_weapon");
 
-  const blocked = craftWeapon("crafter", "espada_gelo");
+  inventory.addItem("legendaryCrafter", "essencia_rara", 6);
+  inventory.addItem("legendaryCrafter", "nucleo_lendario", 2);
+  const legendary = craftWeapon("legendaryCrafter", "espada_gelo");
+  assert.equal(legendary.ok, true);
+  assert.equal(inventory.__getDbForTests().legendaryCrafter.weapons[0].weaponId, "espada_gelo");
+
+  const originalWeapon = config.static.weapons.weapons.temp_lendaria_bloqueada;
+  const originalRecipe = config.static.weapons.crafting.temp_lendaria_bloqueada;
+  try {
+    config.static.weapons.weapons.temp_lendaria_bloqueada = {
+      name: "Lendaria Bloqueada",
+      class: "espada",
+      rarity: "lendario",
+      basePrice: 9999,
+      durability: 10,
+      bossDamage: 1,
+      duelPower: 1
+    };
+    config.static.weapons.crafting.temp_lendaria_bloqueada = {
+      cost: 1,
+      materials: []
+    };
+    const blocked = craftWeapon("legendaryCrafter", "temp_lendaria_bloqueada");
+    assert.equal(blocked.ok, false);
+    assert.match(blocked.reason, /lendárias/);
+  } finally {
+    if (originalWeapon === undefined) delete config.static.weapons.weapons.temp_lendaria_bloqueada;
+    else config.static.weapons.weapons.temp_lendaria_bloqueada = originalWeapon;
+    if (originalRecipe === undefined) delete config.static.weapons.crafting.temp_lendaria_bloqueada;
+    else config.static.weapons.crafting.temp_lendaria_bloqueada = originalRecipe;
+  }
+
+  const blocked = craftWeapon("crafter", "arma_sem_receita");
   assert.equal(blocked.ok, false);
 });
 

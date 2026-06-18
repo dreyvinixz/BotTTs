@@ -155,7 +155,7 @@ function craftWeapon(userId, targetWeaponId) {
 
   const weaponDef = getWeaponDef(targetWeaponId);
   if (!weaponDef) return { ok: false, reason: "Definição da arma não encontrada." };
-  if (weaponDef.shopEnabled === false || weaponDef.craftEnabled === false) {
+  if (weaponDef.craftEnabled === false) {
     return { ok: false, reason: "Esta arma não pode ser craftada." };
   }
   if (weaponDef.rarity === "lendario" && craftingConfig.allowLegendary !== true) {
@@ -194,6 +194,52 @@ function craftWeapon(userId, targetWeaponId) {
   });
 
   return { ok: true, weaponName: weaponDef.name, instanceId: instance.instanceId };
+}
+
+function getCraftStatus(userId, weaponId) {
+  const recipe = config.static.weapons?.crafting?.[weaponId];
+  const weaponDef = getWeaponDef(weaponId);
+  if (!recipe || !weaponDef) return null;
+
+  const inventory = getUserInventory(userId);
+  const { getCoins } = require("./economy");
+  const coins = getCoins(userId);
+  const materials = recipe.materials.map((mat) => {
+    const owned = inventory.items[mat.materialId] || 0;
+    return {
+      ...mat,
+      owned,
+      enough: owned >= mat.amount
+    };
+  });
+  const hasCoins = coins >= recipe.cost;
+  const hasMaterials = materials.every((mat) => mat.enough);
+
+  return {
+    recipe,
+    weaponDef,
+    coins,
+    materials,
+    canCraft: hasCoins && hasMaterials
+  };
+}
+
+function formatCraftMaterials(materials) {
+  return materials
+    .map((mat) => `${mat.enough ? "✅" : "❌"} ${mat.amount}x ${mat.materialId} (Tem: ${mat.owned})`)
+    .join("\n");
+}
+
+function buildCraftDescription(userId, craftingRecipes) {
+  return Object.entries(craftingRecipes).map(([weaponId]) => {
+    const status = getCraftStatus(userId, weaponId);
+    if (!status) return "";
+    const { recipe, weaponDef, materials, canCraft } = status;
+    const materialText = materials
+      .map((mat) => `${mat.amount}x ${mat.materialId} (Tem: ${mat.owned})`)
+      .join(", ");
+    return `${canCraft ? "✅" : "❌"} **${weaponDef.name}** [${weaponDef.rarity}]\nCusto: 🪙 ${recipe.cost} | Materiais: ${materialText}`;
+  }).filter(Boolean).join("\n\n");
 }
 
 function rerollLegendaryAbility(userId, instanceId, rng = Math.random) {
@@ -266,10 +312,19 @@ async function handleForgeInteraction(interaction) {
       new ButtonBuilder().setCustomId("forge_menu_reroll").setLabel("Reroll Lendário").setStyle(ButtonStyle.Secondary).setEmoji("🌀")
     );
 
+    const row3 = new ActionRowBuilder().addComponents(
+      new ButtonBuilder().setCustomId("forge_menu_back").setLabel("Voltar ao Inventário").setStyle(ButtonStyle.Secondary).setEmoji("⬅️")
+    );
+
     if (interaction.isButton()) {
-      return interaction.update({ embeds: [embed], components: [row, row2] });
+      return interaction.update({ embeds: [embed], components: [row, row2, row3] });
     }
-    return interaction.reply({ embeds: [embed], components: [row, row2], flags: MessageFlags.Ephemeral });
+    return interaction.reply({ embeds: [embed], components: [row, row2, row3], flags: MessageFlags.Ephemeral });
+  }
+
+  if (customId === "forge_menu_back") {
+    const { handleInventoryCommand } = require("./weapons");
+    return handleInventoryCommand({ user: interaction.user, update: (p) => interaction.update(p) });
   }
 
   // --- REPAIR MENU ---
@@ -439,36 +494,31 @@ async function handleForgeInteraction(interaction) {
   // --- CRAFT MENU ---
   if (customId === "forge_menu_craft") {
     const craftingRecipes = config.static.weapons?.crafting || {};
-    if (Object.keys(craftingRecipes).length === 0) {
+    const craftableEntries = Object.entries(craftingRecipes)
+      .filter(([weaponId]) => {
+        const weaponDef = getWeaponDef(weaponId);
+        return weaponDef && weaponDef.craftEnabled !== false;
+      });
+
+    if (craftableEntries.length === 0) {
       return interaction.reply({ content: "Nenhuma receita de craft disponível no momento.", flags: MessageFlags.Ephemeral });
     }
-
-    const inventory = getUserInventory(userId);
-    const { getCoins } = require("./economy");
-    const myCoins = getCoins(userId);
 
     const embed = new EmbedBuilder()
       .setColor("#9B59B6")
       .setTitle("⚙️ Craftar Arma")
-      .setDescription("Escolha uma arma para forjar do zero.\n\n" + Object.entries(craftingRecipes).map(([wId, recipe]) => {
-        const wDef = getWeaponDef(wId);
-        if (!wDef) return "";
-        const matText = recipe.materials.map(m => {
-          const has = inventory.items[m.materialId] || 0;
-          return `${m.amount}x ${m.materialId} (Tem: ${has})`;
-        }).join(", ");
-        return `**${wDef.name}**\nCusto: 🪙 ${recipe.cost} | Materiais: ${matText}`;
-      }).join("\n\n"));
+      .setDescription("Escolha uma arma para forjar do zero.\n\n" + buildCraftDescription(userId, Object.fromEntries(craftableEntries)));
 
     const row = new ActionRowBuilder().addComponents(
       new StringSelectMenuBuilder()
         .setCustomId("forge_select_craft")
         .setPlaceholder("Escolha uma arma para craftar...")
-        .addOptions(Object.keys(craftingRecipes).slice(0, 25).map(wId => {
+        .addOptions(craftableEntries.slice(0, 25).map(([wId]) => {
+          const status = getCraftStatus(userId, wId);
           const wDef = getWeaponDef(wId);
           return {
-            label: `${wDef.name}`.slice(0, 100),
-            description: `Custo: ${craftingRecipes[wId].cost} NC`.slice(0, 100),
+            label: `${status.canCraft ? "✅" : "❌"} ${wDef.name} (${wDef.rarity})`.slice(0, 100),
+            description: `Custo: ${status.recipe.cost} NC | ${status.canCraft ? "Pronto para craftar" : "Faltam recursos"}`.slice(0, 100),
             value: wId
           };
         }))
@@ -487,14 +537,20 @@ async function handleForgeInteraction(interaction) {
     if (!craftingConfig) return interaction.reply({ content: "Receita não encontrada.", flags: MessageFlags.Ephemeral });
 
     const wDef = getWeaponDef(wId);
+    const status = getCraftStatus(userId, wId);
+    if (!status) return interaction.reply({ content: "Receita não encontrada.", flags: MessageFlags.Ephemeral });
     
     const embed = new EmbedBuilder()
       .setColor("#9B59B6")
       .setTitle(`⚙️ Confirmar Craft: ${wDef.name}`)
-      .setDescription(`Deseja forjar esta arma?\n\nCusto em moedas: **${craftingConfig.cost} NC**\nMateriais:\n` + craftingConfig.materials.map(m => `- ${m.amount}x ${m.materialId}`).join("\n"));
+      .setDescription(
+        `Deseja forjar esta arma?\n\n` +
+        `Custo em moedas: **${craftingConfig.cost} NC** (Você tem: **${status.coins} NC**)\n` +
+        `Materiais:\n${formatCraftMaterials(status.materials)}`
+      );
 
     const row = new ActionRowBuilder().addComponents(
-      new ButtonBuilder().setCustomId(`forge_craft_confirm:${wId}`).setLabel("Confirmar Craft").setStyle(ButtonStyle.Success),
+      new ButtonBuilder().setCustomId(`forge_craft_confirm:${wId}`).setLabel("Confirmar Craft").setStyle(ButtonStyle.Success).setDisabled(!status.canCraft),
       new ButtonBuilder().setCustomId("forge_menu_craft").setLabel("Voltar").setStyle(ButtonStyle.Secondary)
     );
 

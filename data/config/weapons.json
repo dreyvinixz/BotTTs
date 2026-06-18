@@ -27,11 +27,24 @@
         { "materialId": "pedra_amolar", "amount": 5 }
       ]
     },
+    "adaga_ferro": {
+      "cost": 450,
+      "materials": [
+        { "materialId": "pedra_amolar", "amount": 6 }
+      ]
+    },
     "arco_cacador": {
       "cost": 1200,
       "materials": [
         { "materialId": "pedra_amolar", "amount": 8 },
         { "materialId": "fragmento_mana", "amount": 2 }
+      ]
+    },
+    "espada_chamas": {
+      "cost": 1800,
+      "materials": [
+        { "materialId": "pedra_amolar", "amount": 6 },
+        { "materialId": "fragmento_mana", "amount": 4 }
       ]
     },
     "machado_trovao": {
@@ -40,6 +53,29 @@
         { "materialId": "fragmento_mana", "amount": 6 },
         { "materialId": "essencia_rara", "amount": 2 }
       ]
+    },
+    "martelo_abismo": {
+      "cost": 4200,
+      "materials": [
+        { "materialId": "fragmento_mana", "amount": 5 },
+        { "materialId": "essencia_rara", "amount": 4 }
+      ]
+    },
+    "espada_gelo": {
+      "cost": 12000,
+      "materials": [
+        { "materialId": "essencia_rara", "amount": 6 },
+        { "materialId": "nucleo_lendario", "amount": 2 }
+      ],
+      "allowLegendary": true
+    },
+    "cajado_estelar": {
+      "cost": 15000,
+      "materials": [
+        { "materialId": "essencia_rara", "amount": 8 },
+        { "materialId": "nucleo_lendario", "amount": 3 }
+      ],
+      "allowLegendary": true
     }
   },
   "legendaryReroll": {
@@ -70,7 +106,7 @@
       "pierceParrudoChance": 0.02,
       "pierceDefenseChance": 0.04,
       "lootWeight": 30,
-      "shopEnabled": true
+      "shopEnabled": false
     },
     "adaga_ferro": {
       "name": "Adaga de Ferro",
@@ -83,7 +119,7 @@
       "pierceParrudoChance": 0.03,
       "pierceDefenseChance": 0.08,
       "lootWeight": 25,
-      "shopEnabled": true
+      "shopEnabled": false
     },
     "arco_cacador": {
       "name": "Arco do Cacador",
@@ -96,7 +132,7 @@
       "pierceParrudoChance": 0.06,
       "pierceDefenseChance": 0.12,
       "lootWeight": 16,
-      "shopEnabled": true
+      "shopEnabled": false
     },
     "espada_chamas": {
       "name": "Espada de Chamas",
@@ -109,7 +145,7 @@
       "pierceParrudoChance": 0.08,
       "pierceDefenseChance": 0.1,
       "lootWeight": 14,
-      "shopEnabled": true
+      "shopEnabled": false
     },
     "machado_trovao": {
       "name": "Machado do Trovao",
@@ -122,7 +158,7 @@
       "pierceParrudoChance": 0.14,
       "pierceDefenseChance": 0.18,
       "lootWeight": 8,
-      "shopEnabled": true
+      "shopEnabled": false
     },
     "martelo_abismo": {
       "name": "Martelo do Abismo",
@@ -135,7 +171,7 @@
       "pierceParrudoChance": 0.18,
       "pierceDefenseChance": 0.14,
       "lootWeight": 6,
-      "shopEnabled": true
+      "shopEnabled": false
     },
     "espada_gelo": {
       "name": "Espada de Gelo",
@@ -148,7 +184,7 @@
       "pierceParrudoChance": 0.3,
       "pierceDefenseChance": 0.28,
       "lootWeight": 2,
-      "shopEnabled": true,
+      "shopEnabled": false,
       "ability": {
         "id": "freeze_boss",
         "label": "Congelamento",
@@ -168,7 +204,7 @@
       "pierceParrudoChance": 0.26,
       "pierceDefenseChance": 0.35,
       "lootWeight": 2,
-      "shopEnabled": true,
+      "shopEnabled": false,
       "ability": {
         "id": "arcane_pierce",
         "label": "Perfuração Arcana",

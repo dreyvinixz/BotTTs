@@ -806,6 +806,18 @@ async function handleMarketInteraction(interaction) {
         : `❌ ${result.reason}`,
       flags: MessageFlags.Ephemeral
     });
+
+    if (result.ok) {
+      const suggested = getSuggestedPrice(entry);
+      // Se o preço estiver abaixo do mercado e for uma quantia razoável, faz o anúncio
+      if (suggested > 0 && price < suggested) {
+        const channel = interaction.client.channels.cache.get(interaction.channelId);
+        if (channel) {
+          channel.send(`🚨 **OFERTA NA BOLSA!**\n<@${ownerId}> acabou de listar **${describeEntry(entry)}** por **${formatCoins(price)} NC**!\n*(Isto está abaixo do valor de mercado estimado de ${formatCoins(suggested)} NC)*\n\n🛒 Confira em \`!bolsa\` para comprar antes que acabe!`);
+        }
+      }
+    }
+
     return true;
   }
 
