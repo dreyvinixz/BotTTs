@@ -214,3 +214,30 @@ test("test mode does not send raid alerts outside the test channel", async () =>
   assert.equal(started.ok, true);
   assert.equal(sent, 0);
 });
+
+test("raid_my_items button responds with user's raid inventory", async () => {
+  inventory.__setDbForTests({});
+  inventory.addItem("test_user_items", "escudo_servidor", 3);
+  
+  let calledUpdate = false;
+  const interaction = {
+    customId: "raid_my_items",
+    user: { id: "test_user_items" },
+    channelId: "1348716118981742592",
+    client: { botTtsTestMode: true, botTtsTestChannelId: "1348716118981742592" },
+    isButton: () => true,
+    isRepliable: () => true,
+    guildId: "guild_a",
+    update: async (payload) => {
+      calledUpdate = true;
+      assert.equal(payload.embeds[0].data.title, "🎒 Meus Itens de Raid");
+      assert.equal(payload.embeds[0].data.description.includes("x3"), true);
+      assert.equal(payload.components[0].components[0].data.custom_id, "raid_shop");
+      return true;
+    }
+  };
+  
+  const handled = await raids.handleRaidInteraction(interaction);
+  assert.equal(calledUpdate, true);
+  // handleRaidInteraction returns `undefined` implicitly for most button cases
+});

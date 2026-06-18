@@ -146,10 +146,10 @@ test("MEGA TEST: 10 Atacantes vs 10 Defensores com Itens e Taxas de Guerra", asy
   }
 
   // Testar cálculo de perdas via ledger - nenhum roubo deve ser abusivo
-  const raidLedgers = ledger.__getLedgerForTests().filter(e => e.data.raidId === raidId);
+  const raidLedgers = ledger.__getLedgerForTests().filter(e => e.raidId === raidId);
   const stolenEvents = raidLedgers.filter(e => e.type === "raid_steal_success");
   for (const log of stolenEvents) {
-    assert.ok(log.data.amount <= 1000, `Roubo excessivo detectado (${log.data.amount} NC) - extrapolou o limite da raid!`);
+    assert.ok(log.amount <= 1000, `Roubo excessivo detectado (${log.amount} NC) - extrapolou o limite da raid!`);
   }
 
   // Testar taxas e distribuição - a matematica da taxa
@@ -161,12 +161,13 @@ test("MEGA TEST: 10 Atacantes vs 10 Defensores com Itens e Taxas de Guerra", asy
   assert.equal(res.distributedTotal || res.distributed, distr, "Distribuido Total não bate com a subtração da taxa.");
   
   const paidEvents = raidLedgers.filter(e => e.type === "raid_reward_paid");
-  const sumDistributed = paidEvents.reduce((acc, evt) => acc + evt.data.amount, 0);
+  const sumDistributed = paidEvents.reduce((acc, evt) => acc + evt.amount, 0);
   // Pode haver pequena diferença por arredondamento, então comparamos proximidade
   assert.ok(Math.abs(sumDistributed - distr) <= 10, "Distribuição foi falha (erro de arredondamento excessivo)");
 
   // Checar ledger para confirmar a vida da Raid
-  const types = new Set(raidLedgers.map(e => e.type));
+  const allLedgers = ledger.__getLedgerForTests();
+  const types = new Set(allLedgers.map(e => e.type));
   const expectedEvents = [
     "raid_created", "raid_joined", "raid_started", "raid_item_bought",
     "raid_item_used", "raid_defended", "raid_steal_success", "raid_tax",

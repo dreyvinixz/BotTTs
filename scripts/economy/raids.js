@@ -160,11 +160,14 @@ function ensureCurrentServer(message) {
   }).server;
 }
 
-function getRaidableServers(currentGuildId) {
+function getRaidableServers(currentGuildId, client = null) {
   const current = String(currentGuildId);
+  const testChannelId = client?.botTtsTestChannelId || config.static.app.test?.channelId || "1348716118981742592";
+  const isTestMode = client?.botTtsTestMode === true;
   return getConfiguredServers()
     .filter((server) => server.canBeRaided !== false)
     .filter((server) => String(server.guildId) !== current)
+    .filter((server) => isTestMode || String(server.eventChannelId) !== String(testChannelId))
     .map((server, index) => ({
       internalId: String(index + 1),
       ...server,
@@ -185,8 +188,8 @@ function getServerRaidStatusLabel(guildId) {
   return "Disponível";
 }
 
-function getTargetByInternalId(currentGuildId, internalId) {
-  return getRaidableServers(currentGuildId).find((server) => server.internalId === String(internalId)) || null;
+function getTargetByInternalId(currentGuildId, internalId, client = null) {
+  return getRaidableServers(currentGuildId, client).find((server) => server.internalId === String(internalId)) || null;
 }
 
 function findRaidByStatus(guildId, statuses) {
@@ -246,7 +249,7 @@ function createRaid({ attackerGuildId, attackerChannelId, createdBy, targetInter
     name: guildName || `Servidor ${attackerGuildId}`,
     eventChannelId: attackerChannelId
   }).server;
-  const target = getTargetByInternalId(attackerGuildId, targetInternalId);
+  const target = getTargetByInternalId(attackerGuildId, targetInternalId, client);
 
   if (!target) return { ok: false, reason: "Servidor alvo inválido." };
   const attackGate = canServerAttack(attacker);
@@ -654,8 +657,8 @@ function buildRaidPanel(guildId) {
   return { embeds: [embed], components: raidPanelRows(guildId), content: "" };
 }
 
-function buildServersPayload(guildId) {
-  const servers = getRaidableServers(guildId);
+function buildServersPayload(guildId, client = null) {
+  const servers = getRaidableServers(guildId, client);
   const lines = servers.map((server) => `ID: **${server.internalId}**\nServidor: **${server.name}**\nStatus: **${server.status}**`).join("\n\n") || "Nenhum servidor raidável configurado.";
   const embed = new EmbedBuilder().setColor("#2563EB").setTitle("🌍 Servidores disponíveis para Raid").setDescription(lines);
   return { embeds: [embed], components: [new ActionRowBuilder().addComponents(new ButtonBuilder().setCustomId("raid_home").setLabel("Voltar").setStyle(ButtonStyle.Secondary))], content: "" };
@@ -685,6 +688,25 @@ function buildRaidShopPayload(side = null) {
             emoji: item.emoji
           })))
       )] : [])
+    ],
+    content: ""
+  };
+}
+
+function buildMyRaidItemsPayload(userId) {
+  const inventory = getUserInventory(userId);
+  const items = getRaidItems().filter((item) => (inventory.items[item.id] || 0) > 0);
+  
+  const lines = items.map((item) => `${item.emoji || "🎒"} **${item.label}** x${inventory.items[item.id]}\n${item.description}`).join("\n\n") || "Você não possui nenhum item de Raid.";
+  
+  const embed = new EmbedBuilder().setColor("#16A34A").setTitle("🎒 Meus Itens de Raid").setDescription(lines);
+  return {
+    embeds: [embed],
+    components: [
+      new ActionRowBuilder().addComponents(
+        new ButtonBuilder().setCustomId("raid_shop").setLabel("Voltar para Loja").setEmoji("🛒").setStyle(ButtonStyle.Primary),
+        new ButtonBuilder().setCustomId("raid_home").setLabel("Voltar ao Painel").setStyle(ButtonStyle.Secondary)
+      )
     ],
     content: ""
   };
@@ -748,6 +770,13 @@ async function showRaidLobbyMessage(message, raid) {
 }
 
 async function handleRaidCommand(message, text = "") {
+  const allowedChannels = config.static.app.events?.channelIds || [];
+  const testChannelId = config.static.app.test?.channelId || "1348716118981742592";
+  const isAllowed = allowedChannels.includes(String(message.channelId)) || 
+                    (message.client?.botTtsTestMode && String(message.channelId) === String(testChannelId));
+
+  if (!isAllowed) return message.reply("❌ O sistema de Raid só pode ser utilizado nos servidores oficiais autorizados do BotTTs.");
+
   ensureCurrentServer(message);
   const args = (text || "").trim().split(/\s+/).filter(Boolean);
   const sub = (args[0] || "").toLowerCase();
@@ -789,22 +818,34 @@ async function handleRaidCommand(message, text = "") {
 
   if (sub === "status") return message.reply(buildStatusPayload(message.guild.id));
   if (sub === "loja") return message.reply(buildRaidShopPayload());
-  if (sub === "servidores") return message.reply(buildServersPayload(message.guild.id));
+  if (sub === "servidores") return message.reply(buildServersPayload(message.guild.id, message.client));
 
   return message.reply(buildRaidPanel(message.guild.id));
 }
 
 async function handleRaidInteraction(interaction) {
   if (!interaction.customId?.startsWith("raid_")) return false;
+  
+  const allowedChannels = config.static.app.events?.channelIds || [];
+  const testChannelId = config.static.app.test?.channelId || "1348716118981742592";
+  const isAllowed = allowedChannels.includes(String(interaction.channelId)) || 
+                    (interaction.client?.botTtsTestMode && String(interaction.channelId) === String(testChannelId));
+
+  if (!isAllowed) {
+    if (interaction.isRepliable()) await interaction.reply({ content: "❌ Canal não autorizado para Raids.", flags: MessageFlags.Ephemeral });
+    return true;
+  }
+
   const guildId = interaction.guildId || interaction.guild?.id;
   if (!guildId) return false;
 
   if (interaction.isButton()) {
     if (interaction.customId === "raid_home") return interaction.update(buildRaidPanel(guildId));
-    if (interaction.customId === "raid_servers") return interaction.update(buildServersPayload(guildId));
+    if (interaction.customId === "raid_servers") return interaction.update(buildServersPayload(guildId, interaction.client));
     if (interaction.customId === "raid_shop") return interaction.update(buildRaidShopPayload());
     if (interaction.customId === "raid_shop_attack") return interaction.update(buildRaidShopPayload("attack"));
     if (interaction.customId === "raid_shop_defense") return interaction.update(buildRaidShopPayload("defense"));
+    if (interaction.customId === "raid_my_items") return interaction.update(buildMyRaidItemsPayload(interaction.user.id));
     if (interaction.customId === "raid_status") return interaction.update(buildStatusPayload(guildId));
     if (interaction.customId === "raid_history") return interaction.update(buildHistoryPayload(guildId));
     if (interaction.customId === "raid_use_item") return interaction.update(buildUseItemPayload(interaction.user.id, guildId));
@@ -813,7 +854,7 @@ async function handleRaidInteraction(interaction) {
       return interaction.reply({ content: result.ok ? "🛡️ Você está protegendo este servidor." : `❌ ${result.reason}`, flags: MessageFlags.Ephemeral });
     }
     if (interaction.customId === "raid_start") {
-      const servers = getRaidableServers(guildId);
+      const servers = getRaidableServers(guildId, interaction.client);
       if (servers.length === 0) return interaction.reply({ content: "Nenhum servidor raidável configurado.", flags: MessageFlags.Ephemeral });
       const modal = new ModalBuilder()
         .setCustomId("raid_start_modal")
