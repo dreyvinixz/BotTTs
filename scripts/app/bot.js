@@ -49,7 +49,7 @@ function buildHelpEmbed() {
         '`!saldo` - 💵 Verifica quanto dinheiro virtual você tem.',
         '`!rank` - 🏆 Mostra os mais ricos do servidor.',
         '`!doar <@user> <valor>` - 💸 Transfere Nanacoins simples.',
-        '`!loja` - 🏪 Loja Oficial com **estoque virtual** e preços dinâmicos.',
+        '`!loja` - 🏪 Loja Oficial com **estoque virtual**, preços dinâmicos e **Lootboxes**.',
         '`!bolsa` - 📈 Bolsa de Valores real: compre, venda e lucre com especulação!',
         '`!raid` - ⚔️ Raid de Servidores: guerra econômica controlada.',
         '`!inventario` / `!inv` - 🎒 Mostra itens, armas e acesso completo à **Forja**!'
@@ -62,7 +62,7 @@ function buildHelpEmbed() {
         '`!beijarmuro` - 💋 Beija o muro e testa sua sorte.'
       ].join('\n') },
       { name: '🎮 Games, Boss & RPG', value: [
-        '`!games` - 🎰 Hub central de jogos: Forca, Trivia, Duelo e **Lootboxes**!'
+        '`!games` - 🎰 Hub central de jogos: Forca, Trivia/RPG e Duelo!'
       ].join('\n') },
       { name: '🧠 IA & Utilidades', value: [
         '`!nana <texto>` - 💬 Conversa com a IA no modo casual/persona.',

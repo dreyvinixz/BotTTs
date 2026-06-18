@@ -91,7 +91,8 @@ npm start
 | `!equipar <weaponId>` | Equip one weapon from your inventory. |
 | `!bolsa` | Open the centralized market UI for buying, selling, trade, and history. |
 | `!games` | Open the game hub for Hangman, Multiverse/Trivia, and Duels. |
-| `!fliperama` | Open lootboxes and arcade rewards. |
+| `!loja` | Open boosts, items, lootboxes, and market shortcuts. |
+| `!fliperama` / `!lootbox` | Shortcut to open lootboxes. |
 | `!nana <text>` | Casual/persona LLM response. |
 | `!question <question>` | Serious professional answer. |
 | `!img <prompt>` | Generate a realistic image. |

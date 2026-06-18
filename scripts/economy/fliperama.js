@@ -59,10 +59,15 @@ async function applyReward(interaction, reward, userId) {
 }
 
 async function handleFliperamaCommand(message) {
+  const viewer = message.author || message.user;
+  if (!viewer?.id) {
+    return message.reply?.("Não consegui identificar quem abriu as lootboxes.");
+  }
+
   const row = new ActionRowBuilder().addComponents(
     ...Object.entries(LOOTBOXES).map(([key, box]) =>
       new ButtonBuilder()
-        .setCustomId(`fliperama_buy_${key}_${message.author.id}`)
+        .setCustomId(`fliperama_buy_${key}_${viewer.id}`)
         .setLabel(box.buttonLabel || `Abrir ${box.label}`)
         .setStyle(styleFromName(box.buttonStyle))
     )
@@ -74,8 +79,8 @@ async function handleFliperamaCommand(message) {
 
   const embed = new EmbedBuilder()
     .setColor("#FF00FF")
-    .setTitle("🎰 FLIPERAMA CLANDESTINO 🎰")
-    .setDescription(`Bem-vindo ao Fliperama! Gaste suas Nanacoins para abrir as LootBoxes!\n\n${description}`)
+    .setTitle("📦 LOOTBOXES DA LOJA NANA 📦")
+    .setDescription(`Gaste suas Nanacoins para abrir LootBoxes direto pela loja!\n\n${description}`)
     .setFooter({ text: "Apenas você pode clicar nestes botões." });
 
   const payload = { embeds: [embed], components: [row] };

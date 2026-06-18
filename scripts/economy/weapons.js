@@ -163,7 +163,12 @@ async function handleEquipWeaponCommand(message, text) {
 }
 
 async function handleInventoryCommand(message) {
-  const inventory = getUserInventory(message.author.id);
+  const viewer = message.author || message.user;
+  if (!viewer?.id) {
+    return message.reply?.("Não consegui identificar o dono do inventário.");
+  }
+
+  const inventory = getUserInventory(viewer.id);
   const BOOST_PRICES = config.static.shop?.boosts || {};
 
   function getItemDisplay(itemId) {
@@ -205,7 +210,7 @@ async function handleInventoryCommand(message) {
   if (unequippedWeapons.length > 0) {
     const row = new ActionRowBuilder().addComponents(
       new StringSelectMenuBuilder()
-        .setCustomId(`inv_equip_${message.author?.id || message.user?.id}`)
+        .setCustomId(`inv_equip_${viewer.id}`)
         .setPlaceholder("Escolha uma arma para equipar...")
         .addOptions(unequippedWeapons.slice(0, 25).map((weapon) => {
           const def = getWeaponDef(weapon.weaponId);
@@ -221,7 +226,7 @@ async function handleInventoryCommand(message) {
 
   const embed = new EmbedBuilder()
     .setColor("#22C55E")
-    .setTitle(`🎒 Inventário de ${message.author?.username || message.user?.username}`)
+    .setTitle(`🎒 Inventário de ${viewer.username}`)
     .setDescription("Aqui estão todos os seus pertences! Use o menu abaixo para equipar uma arma ou vá na `!bolsa` para vender.")
     .addFields(
       { name: "🧰 Itens & Consumíveis", value: itemLines.join("\n") || "> *Mochila vazia...*", inline: false },

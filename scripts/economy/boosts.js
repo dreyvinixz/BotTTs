@@ -115,6 +115,7 @@ function shopButtons(ownerId) {
     new ActionRowBuilder().addComponents(
       new ButtonBuilder().setCustomId(`shop_cat_boosts_${ownerId}`).setLabel("🚀 Boosts").setStyle(ButtonStyle.Success),
       new ButtonBuilder().setCustomId(`shop_cat_items_${ownerId}`).setLabel("🎒 Itens").setStyle(ButtonStyle.Primary),
+      new ButtonBuilder().setCustomId(`shop_cat_lootbox_${ownerId}`).setLabel("📦 Lootboxes").setStyle(ButtonStyle.Secondary),
       new ButtonBuilder().setCustomId(`shop_cat_market_${ownerId}`).setLabel("📈 Bolsa de Valores").setStyle(ButtonStyle.Danger)
     )
   ];
@@ -187,6 +188,15 @@ async function showShopCategory(interaction, category) {
   if (category === "market") {
     const { handleMarketCommand } = require("./market");
     return handleMarketCommand({ user: interaction.user, update: (payload) => interaction.update(payload) });
+  }
+
+  if (category === "lootbox") {
+    const { handleFliperamaCommand } = require("./fliperama");
+    return handleFliperamaCommand({
+      author: interaction.user,
+      user: interaction.user,
+      update: (payload) => interaction.update(payload)
+    });
   }
 
   const { EmbedBuilder } = require("discord.js");

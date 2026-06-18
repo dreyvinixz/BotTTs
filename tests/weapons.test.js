@@ -32,3 +32,18 @@ test("legendary weapons expose ability data and boss damage modifiers", () => {
   assert.equal(result.ability.id, "freeze_boss");
   assert.ok(result.damage > equipped.def.bossDamage);
 });
+
+test("inventory command can redraw from an interaction user", async () => {
+  inventory.__setDbForTests({});
+  let payload;
+
+  await weapons.handleInventoryCommand({
+    user: { id: "u1", username: "Tester" },
+    update: async (nextPayload) => {
+      payload = nextPayload;
+    }
+  });
+
+  assert.equal(payload.embeds[0].data.title, "🎒 Inventário de Tester");
+  assert.equal(payload.components[0].components[0].data.custom_id, "open_forge_menu");
+});

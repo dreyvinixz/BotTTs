@@ -27,6 +27,38 @@ test("shop no longer exposes direct weapon purchase categories", async () => {
   assert.match(payload.content, /bolsa/);
 });
 
+test("shop exposes lootboxes and opens the lootbox menu", async () => {
+  let payload;
+  await handleBoostCommand({
+    author: { id: "player" },
+    reply: async (nextPayload) => {
+      payload = nextPayload;
+    }
+  });
+
+  const buttonIds = payload.components
+    .flatMap((row) => row.toJSON().components)
+    .map((component) => component.custom_id);
+  assert.ok(buttonIds.includes("shop_cat_lootbox_player"));
+
+  let updatedPayload;
+  await handleBoostInteraction({
+    isButton: () => true,
+    isStringSelectMenu: () => false,
+    customId: "shop_cat_lootbox_player",
+    user: { id: "player", username: "Tester" },
+    update: async (nextPayload) => {
+      updatedPayload = nextPayload;
+    }
+  });
+
+  const lootboxButtonIds = updatedPayload.components
+    .flatMap((row) => row.toJSON().components)
+    .map((component) => component.custom_id);
+  assert.match(updatedPayload.embeds[0].data.title, /LOOTBOXES/);
+  assert.ok(lootboxButtonIds.some((id) => id.startsWith("fliperama_buy_")));
+});
+
 test("legacy weapon select menus do not grant weapons or remove coins", async () => {
   economy.__setDbForTests({ player: 20000 });
   inventory.__setDbForTests({});

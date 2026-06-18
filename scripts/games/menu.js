@@ -10,8 +10,7 @@ async function handleGamesCommand(message) {
     .addFields(
       { name: '🎮 Forca da IA', value: 'Sobreviva à forca gerada por imagens da IA. Escolha entre 1, 3 ou 5 rodadas!' },
       { name: '🌌 Multiverso (RPG/Trivia)', value: 'Improviso maluco ou Show do Milhão. Teste sua inteligência.' },
-      { name: '⚔️ Duelo Clandestino', value: 'Desafie um amigo para uma rinha tática valendo Nanacoins.' },
-      { name: '📦 Lootbox / Gacha', value: 'Compre caixas para ganhar armas épicas e itens raros!' }
+      { name: '⚔️ Duelo Clandestino', value: 'Desafie um amigo para uma rinha tática valendo Nanacoins.' }
     )
     .setImage('https://media.giphy.com/media/l41YkxvU8c7J7Bba0/giphy.gif')
     .setFooter({ text: 'A casa sempre ganha... mentira, pode apostar tranquilo!' });
@@ -29,11 +28,7 @@ async function handleGamesCommand(message) {
       new ButtonBuilder()
         .setCustomId(`games_menu_duelo_${userId}`)
         .setLabel('⚔️ Duelo')
-        .setStyle(ButtonStyle.Danger),
-      new ButtonBuilder()
-        .setCustomId(`games_menu_lootbox_${userId}`)
-        .setLabel('📦 Lootbox')
-        .setStyle(ButtonStyle.Secondary)
+        .setStyle(ButtonStyle.Danger)
     );
 
   const payload = { embeds: [embed], components: [row] };
@@ -57,8 +52,8 @@ async function handleGamesInteraction(interaction) {
       if (interaction.user.id !== ownerId) {
         return interaction.reply({ content: "❌ Apenas quem digitou `!games` pode usar este menu!", flags: MessageFlags.Ephemeral });
       }
-      const { handleFliperamaCommand } = require("../economy/fliperama");
-      return handleFliperamaCommand({ author: interaction.user, user: interaction.user, update: (p) => interaction.update(p) });
+      const { handleBoostCommand } = require("../economy/boosts");
+      return handleBoostCommand({ author: interaction.user, user: interaction.user, update: (p) => interaction.update(p) });
     }
     
     if (interaction.customId.startsWith('games_menu_aventura_')) {
