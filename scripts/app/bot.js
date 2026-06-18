@@ -1,14 +1,13 @@
 const { Client, GatewayIntentBits, EmbedBuilder } = require("discord.js");
 const config = require("../core/config");
 const { isCommand, getCommandText } = require("../core/utils");
-const { assertOllamaReady } = require("../core/services");
-const { limparResposta, pedirRespostaAoOllama } = require("../ai/ollama");
 const { handleVoiceCommand } = require("../voice/voice");
 const { handleImageCommand } = require("../ai/image");
-const {
+const { 
   isPerguntaMapasPathOfExile,
   respostaMapasPathOfExile,
-  perguntarQuestion
+  perguntarQuestion,
+  perguntarGeminiCli
 } = require("../ai/question");
 const {
   coletarGifs,
@@ -127,16 +126,13 @@ async function handleTextCommand(message) {
   }
 
   try {
-    await assertOllamaReady();
-    const resposta = limparResposta(await pedirRespostaAoOllama([
-      { role: "system", content: "Responda em português do Brasil de forma direta, natural e curta." },
-      { role: "user", content: texto }
-    ]));
+    const prompt = `Responda em português do Brasil de forma direta, natural e curta.\n\n${texto}`;
+    const resposta = await perguntarGeminiCli(prompt);
 
     return sendChunkedReply(message, resposta);
   } catch (err) {
     console.log("🔥 Erro no comando de texto:", err.message);
-    return message.reply("⚠️ Erro só no texto/LLM. Abre o Ollama com `ollama serve`.");
+    return message.reply("⚠️ Erro ao contatar a IA (Gemini).");
   }
 }
 
@@ -167,7 +163,7 @@ async function handleQuestionCommand(message) {
         allowedMentions: { repliedUser: false, parse: [] }
       });
     }
-    return message.reply("⚠️ Erro no modo pergunta. Confere se o Ollama está aberto com `ollama serve`.");
+    return message.reply("⚠️ Erro ao processar a pergunta pela IA.");
   }
 }
 

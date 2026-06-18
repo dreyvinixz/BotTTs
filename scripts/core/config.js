@@ -75,14 +75,7 @@ const config = {
   SERVIDOR_FOFOCA: process.env.SERVIDOR_FOFOCA,
   SUPERADMIN_IDS: getEnvList("SUPERADMIN_IDS"),
 
-  OLLAMA_MODEL: getEnvString("OLLAMA_MODEL", "qwen3:1.7b"),
-  OLLAMA_HOST: getEnvString("OLLAMA_HOST", "http://127.0.0.1:11434"),
-  OLLAMA_TIMEOUT_MS: getEnvNumber("OLLAMA_TIMEOUT_MS", 30_000),
-  OLLAMA_NUM_PREDICT: getEnvNumber("OLLAMA_NUM_PREDICT", 120),
-  OLLAMA_TEMPERATURE: getEnvNumber("OLLAMA_TEMPERATURE", 0.6),
-  OLLAMA_TOP_K: getEnvNumber("OLLAMA_TOP_K", 40),
-  OLLAMA_TOP_P: getEnvNumber("OLLAMA_TOP_P", 0.9),
-  OLLAMA_REPEAT_PENALTY: getEnvNumber("OLLAMA_REPEAT_PENALTY", 1.15),
+
 
   QUESTION_PROVIDER: getEnvString("QUESTION_PROVIDER", "local").toLowerCase(),
   GEMINI_CLI_MODEL: getEnvString("GEMINI_CLI_MODEL", "auto").toLowerCase(),
@@ -156,11 +149,7 @@ config.env = {
   discordToken: config.DISCORD_TOKEN,
   servidorFofoca: config.SERVIDOR_FOFOCA,
   superAdminIds: config.SUPERADMIN_IDS,
-  ollama: {
-    model: config.OLLAMA_MODEL,
-    host: config.OLLAMA_HOST,
-    timeoutMs: config.OLLAMA_TIMEOUT_MS
-  },
+
   forge: {
     host: config.FORGE_HOST,
     realisticModel: config.FORGE_REALISTIC_MODEL,

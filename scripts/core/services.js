@@ -17,16 +17,11 @@ async function assertLocalService(url, name) {
   }
 }
 
-async function assertOllamaReady() {
-  await assertLocalService(`${config.OLLAMA_HOST}/api/tags`, "Ollama");
-}
-
 async function assertForgeReady() {
   await assertLocalService(`${config.FORGE_HOST}/sdapi/v1/options`, "Forge WebUI");
 }
 
 module.exports = {
   assertLocalService,
-  assertOllamaReady,
   assertForgeReady
 };

@@ -3,7 +3,7 @@ const config = require("../core/config");
 const { ActionRowBuilder, ButtonBuilder, ButtonStyle, MessageFlags, EmbedBuilder } = require("discord.js");
 const { getCoins, addCoins, removeCoins, formatCoins } = require("../economy/economy");
 const { getStealChanceExtra } = require("../economy/boosts");
-const { pedirRespostaAoOllama } = require("../ai/ollama");
+const { perguntarGeminiCli } = require("../ai/question");
 const { createDebouncedJsonWriter } = require("../core/storage");
 const { resolveUserFromMessage, resolveUserFromInteraction } = require("../core/userResolver");
 const { isSuperAdmin } = require("../admin/admin");
@@ -399,7 +399,7 @@ async function handleParrudoCommand(message, text) {
   return message.reply(`🛡️ **MODO PARRUDO ATIVADO!** Você bebeu o suco, pagou ${formatCoins(cost)} Nanacoins 🪙 e ficará **irroubável por ${durationHours} horas**! Ninguém pode encostar no seu dinheiro.`);
 }
 
-async function narrarResolucaoOllama(p1Name, p1Choice, p2Name, p2Choice, winnerName, winReason) {
+async function narrarResolucaoGemini(p1Name, p1Choice, p2Name, p2Choice, winnerName, winReason) {
   const prompt = `Escreva uma cena de combate muito épica e cômica (no máximo 3 parágrafos curtos) no estilo anime. 
 Lutadores: ${p1Name} e ${p2Name}.
 ${p1Name} usou a técnica: ${p1Choice}.
@@ -408,9 +408,7 @@ O resultado foi: ${winnerName === 'Empate' ? 'A batalha terminou em um empate co
 Faça o texto parecer empolgante, seja criativo com os golpes, mas não diga "Aqui está o texto" ou saia do personagem. Apenas narre.`;
 
   try {
-    const response = await pedirRespostaAoOllama([
-      { role: "user", content: prompt }
-    ], { usarPoliticasDono: false });
+    const response = await perguntarGeminiCli(prompt);
     return response.trim();
   } catch (err) {
     console.error("Erro na narração do duelo:", err);
@@ -508,9 +506,9 @@ async function handleButtonInteraction(interaction) {
       resultadoFinal = `🏆 **VITÓRIA!** O grande vencedor foi **${winner.name}**, que levou o pote de **${duel.amount * 2} Nanacoins 🪙** para casa, deixando ${perdedor.name} quebrado!`;
     }
 
-    const m = await channel.send(`⏳ **OS LUTADORES FIZERAM SUAS ESCOLHAS!**\nO Ollama está escrevendo a narração épica da treta...`);
+    const m = await channel.send(`⏳ **OS LUTADORES FIZERAM SUAS ESCOLHAS!**\nO Gemini está escrevendo a narração épica da treta...`);
 
-    const narracao = await narrarResolucaoOllama(
+    const narracao = await narrarResolucaoGemini(
       duel.p1.name, duel.p1.choice,
       duel.p2.name, duel.p2.choice,
       winner === "Empate" ? "Empate" : winner.name,

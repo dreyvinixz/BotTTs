@@ -275,7 +275,7 @@ async function iniciarTurnoImproviso(channelId, channel, maxRounds, currentRound
   try {
     const msg = await channel.send(`📜 (Rodada ${currentRound}/${maxRounds}) Abrindo um novo Universo...`);
 
-    // Usa o banco de cenários pré-configurado (sem depender do Ollama)
+    // Usa o banco de cenários pré-configurado (sem depender de LLM)
     const { cenario, img: promptImg } = getCenarioAleatorio(channelId, nomeVitima);
 
     // Tenta gerar a imagem no Forge (opcional, jogo continua se falhar)
@@ -517,7 +517,7 @@ async function iniciarModoEnigma(channelId, channel, themeObj, diffObj, themeKey
       attachment = null;
     }
 
-    // Limpeza final de parênteses para todas as opções (Ollama ou Banco)
+    // Limpeza final de parênteses para todas as opções (LLM ou Banco)
     verdadeira = verdadeira.replace(/\s*\(.*?\)/g, '').trim();
     f1 = f1.replace(/\s*\(.*?\)/g, '').trim();
     f2 = f2.replace(/\s*\(.*?\)/g, '').trim();

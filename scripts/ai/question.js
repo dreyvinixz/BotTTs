@@ -4,8 +4,6 @@ const path = require("path");
 const util = require("util");
 const { execFile } = require("child_process");
 const config = require("../core/config");
-const { assertOllamaReady } = require("../core/services");
-const { limparResposta, pedirRespostaAoOllama, logOllamaTokenStats } = require("./ollama");
 
 const execFileAsync = util.promisify(execFile);
 
@@ -141,41 +139,19 @@ async function perguntarGeminiCli(texto) {
   return output;
 }
 
-async function perguntarQuestionLocal(texto) {
-  console.log(`❓ [Question/Ollama Local] Usando fallback/local. Pergunta: "${texto.slice(0, 140)}"`);
-  await assertOllamaReady();
-  const startTime = Date.now();
-  const resposta = limparResposta(await pedirRespostaAoOllama([
-    { role: "system", content: montarPromptQuestion("") },
-    { role: "user", content: texto }
-  ], {
-    usarPoliticasDono: false,
-    generationOptions: {
-      temperature: 0.25,
-      num_predict: 500
-    }
-  }));
-  const latency = Date.now() - startTime;
-  console.log(`✅ [Question/Ollama Local] Resposta recebida em ${latency}ms (${resposta.length} chars).`);
-  logOllamaTokenStats();
-  return resposta;
-}
-
 async function perguntarQuestion(texto) {
-  console.log(`❓ [Question] Provider configurado: ${config.QUESTION_PROVIDER}`);
-  if (config.QUESTION_PROVIDER === "gemini_cli") {
-    try {
-      return limparResposta(await perguntarGeminiCli(texto));
-    } catch (err) {
-      console.warn(`⚠️ [Question/Gemini CLI] Falhou; usando Ollama local. Erro: ${err.message}`);
-    }
+  try {
+    return await perguntarGeminiCli(texto);
+  } catch (err) {
+    console.warn(`⚠️ [Question/Gemini CLI] Falhou. Erro: ${err.message}`);
+    throw err;
   }
-
-  return perguntarQuestionLocal(texto);
 }
 
 module.exports = {
   isPerguntaMapasPathOfExile,
   respostaMapasPathOfExile,
-  perguntarQuestion
+  perguntarQuestion,
+  perguntarGeminiCli,
+  montarPromptQuestion
 };
