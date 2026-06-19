@@ -126,18 +126,11 @@
     "ouro": {
       "cost": 7000,
       "label": "💎 Caixa de Ouro",
-      "desc": "Prêmios: Boss, Game Boost 3x/4x, Ácido e até 10k NC. Risco: Perder 5k.",
+      "desc": "Prêmios: Boss, Game Boost 3x/4x, Ácido, Armas e até 10k NC.",
       "color": "#FFD700",
       "buttonLabel": "Abrir Ouro (7k)",
       "buttonStyle": "Success",
       "rewards": [
-        {
-          "weight": 15,
-          "type": "coinsPenalty",
-          "amount": 5000,
-          "color": "#FF0000",
-          "text": "**AZAR SUPREMO!** 📉 A caixa estava amaldiçoada! Você perdeu **{amount} Nanacoins** extras do seu saldo."
-        },
         {
           "weight": 15,
           "type": "spawnBoss",
@@ -184,6 +177,96 @@
           "weight": 10,
           "type": "nothing",
           "text": "**NADA**! 🎲 A caixa estava vazia."
+        }
+      ]
+    },
+    "platina": {
+      "cost": 15000,
+      "label": "🧊 Caixa de Platina",
+      "desc": "Prêmios: Boost Boss 2x, Armas Épicas/Lendárias, até 25k NC.",
+      "color": "#E5E4E2",
+      "buttonLabel": "Abrir Platina (15k)",
+      "buttonStyle": "Primary",
+      "rewards": [
+        {
+          "weight": 15,
+          "type": "boost",
+          "value": "boss_loot_2x",
+          "text": "um **Boost Boss 2x 🐉** (1 uso)!"
+        },
+        {
+          "weight": 10,
+          "type": "boost",
+          "value": "game_4x",
+          "text": "um **Game Boost 4x 🚀** (30 minutos)!"
+        },
+        {
+          "weight": 20,
+          "type": "weaponByRarity",
+          "rarity": "epico",
+          "text": "uma **arma épica ✨**!"
+        },
+        {
+          "weight": 5,
+          "type": "weaponByRarity",
+          "rarity": "lendario",
+          "text": "uma **arma lendária 🟡**!"
+        },
+        {
+          "weight": 25,
+          "type": "coinsRange",
+          "min": 10000,
+          "max": 25000,
+          "text": "a bolada de **{amount} Nanacoins 🪙**!"
+        },
+        {
+          "weight": 10,
+          "type": "spawnBoss",
+          "text": "a **Invocação do World Boss 👹**!"
+        },
+        {
+          "weight": 15,
+          "type": "nothing",
+          "text": "**NADA**! 🎲 A caixa de platina estava cheia de ar."
+        }
+      ]
+    },
+    "diamante": {
+      "cost": 35000,
+      "label": "💎 Caixa de Diamante",
+      "desc": "Prêmios: Armas Lendárias garantidas ou até 60k NC.",
+      "color": "#b9f2ff",
+      "buttonLabel": "Abrir Diamante (35k)",
+      "buttonStyle": "Success",
+      "rewards": [
+        {
+          "weight": 25,
+          "type": "boost",
+          "value": "boss_loot_2x",
+          "text": "um **Boost Boss 2x 🐉** (1 uso)!"
+        },
+        {
+          "weight": 20,
+          "type": "weaponByRarity",
+          "rarity": "lendario",
+          "text": "uma **arma lendária 🟡**!"
+        },
+        {
+          "weight": 30,
+          "type": "coinsRange",
+          "min": 30000,
+          "max": 60000,
+          "text": "o GRANDE prêmio de **{amount} Nanacoins 🪙**!"
+        },
+        {
+          "weight": 15,
+          "type": "spawnBoss",
+          "text": "a **Invocação do World Boss 👹**!"
+        },
+        {
+          "weight": 10,
+          "type": "nothing",
+          "text": "**NADA**! 🎲 Inacreditável... a caixa de diamante era falsa!"
         }
       ]
     }

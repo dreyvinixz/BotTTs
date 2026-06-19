@@ -25,7 +25,7 @@
     "timeoutMs": 300000,
     "nextRoundDelayMs": 3000,
     "letterReward": 1,
-    "wordReward": 150,
+    "wordReward": 200,
     "letterWinReward": 50,
     "wrongWordPenaltyMax": 200,
     "image": {

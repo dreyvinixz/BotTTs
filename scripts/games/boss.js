@@ -177,7 +177,7 @@ async function finishBoss(interaction, boss) {
   );
 
   const { getBossTypeConfig } = require("./bossRules");
-  const { addItem } = require("../economy/inventory");
+  const { addItem, hasItem, removeItem } = require("../economy/inventory");
   const { weightedChoice } = require("../core/random");
   const { recordLedgerEvent } = require("../economy/ledger");
 
@@ -193,9 +193,15 @@ async function finishBoss(interaction, boss) {
       const candidates = Object.entries(drops).map(([id, cfg]) => ({ id, ...cfg }));
       const selected = weightedChoice(candidates);
       if (selected) {
-        const amount = Math.floor(Math.random() * (selected.max - selected.min + 1)) + selected.min;
+        let amount = Math.floor(Math.random() * (selected.max - selected.min + 1)) + selected.min;
+        let isDouble = false;
+        if (hasItem(prize.userId, "boss_loot_2x", 1)) {
+          removeItem(prize.userId, "boss_loot_2x", 1);
+          amount *= 2;
+          isDouble = true;
+        }
         addItem(prize.userId, selected.id, amount);
-        dropText = ` + **${amount}x ${selected.id}** 🎁`;
+        dropText = ` + **${amount}x ${selected.id}** 🎁${isDouble ? " *(Boost 2x 🐉)*" : ""}`;
         recordLedgerEvent("boss_material_drop", {
           userId: prize.userId,
           bossType: boss.type,

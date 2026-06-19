@@ -1,12 +1,12 @@
 # BotTTs
 
-BotTTs is a Discord bot focused on Portuguese-BR voice, local LLM chat, image generation, and a serious `!question` support mode.
+BotTTs is a Discord bot focused on Portuguese-BR voice, OpenAI-powered chat, image generation, and a serious `!question` support mode.
 
 The project is designed to run mostly locally:
 
 - Discord integration with `discord.js`
-- Local casual/persona chat through Ollama
-- Optional Gemini CLI provider for serious questions
+- Casual/persona chat through the OpenAI API
+- Serious `!question` support mode through the OpenAI API
 - Text-to-speech through Microsoft Edge TTS, with optional Google Cloud TTS
 - Image generation through Stable Diffusion Forge WebUI
 - Runtime memory for GIFs and server notes stored under `data/`
@@ -16,7 +16,7 @@ The project is designed to run mostly locally:
 - Casual Discord persona responses when mentioned.
 - Low-frequency spontaneous replies for questions/media/casual chat.
 - `!question` mode for serious, professional answers.
-- Optional Gemini CLI routing for `!question`, with local Ollama fallback.
+- OpenAI routing for chat, image prompt improvement, and `!question`.
 - `!imagem`, `!img`, and `!anime` commands for Forge image generation.
 - `!voz`, `!f`, and `!voice` commands for voice-channel TTS.
 - Auto-collection of GIF links used by the server.
@@ -26,9 +26,7 @@ The project is designed to run mostly locally:
 
 - Node.js 20 or newer
 - A Discord bot token
-- Ollama installed and running
-- A local Ollama model, usually `botbanana`
-- Optional: Gemini CLI logged in with Google
+- An OpenAI API key
 - Optional: Stable Diffusion Forge WebUI running with `--api`
 - Optional: Google Cloud TTS credentials
 
@@ -46,30 +44,13 @@ Create your local environment file:
 Copy-Item examples/.env.example .env
 ```
 
-Create your local Ollama Modelfile:
-
-```powershell
-New-Item -ItemType Directory -Force local/ollama
-Copy-Item examples/Modelfile.example local/ollama/Modelfile
-```
-
 Edit `.env` and set at least:
 
 ```env
 DISCORD_TOKEN=your_discord_bot_token
-OLLAMA_MODEL=botbanana
-```
-
-Create or refresh the local Ollama model:
-
-```powershell
-npm run ollama:create
-```
-
-Start Ollama:
-
-```powershell
-ollama serve
+AI_PROVIDER=openai
+OPENAI_API_KEY=your_openai_api_key
+OPENAI_MODEL=gpt-4.1-mini
 ```
 
 Run the bot:
@@ -105,26 +86,15 @@ The bot also responds when mentioned or when users say `nana` / `botbanana` as s
 
 `!question` is intentionally separated from the casual persona.
 
-Use local Ollama only:
+Use OpenAI:
 
 ```env
-QUESTION_PROVIDER=local
+AI_PROVIDER=openai
+OPENAI_API_KEY=your_openai_api_key
+OPENAI_MODEL=gpt-4.1-mini
 ```
 
-Use Gemini CLI with local fallback:
-
-```env
-QUESTION_PROVIDER=gemini_cli
-GEMINI_CLI_MODEL=auto
-```
-
-Gemini CLI must be logged in once:
-
-```powershell
-gemini
-```
-
-The bot launches Gemini CLI on demand. The CLI does not need to stay open.
+Gemini CLI is still available as a legacy fallback with `AI_PROVIDER=gemini_cli`, but the recommended provider is OpenAI.
 
 Terminal logs show provider choice, latency, and token usage for each `!question`.
 
@@ -196,7 +166,7 @@ These files are local runtime state and should not contain source code configura
 - `package.json` - npm scripts and dependencies.
 - `scripts/app/` - Discord client and command router.
 - `scripts/admin/` - superadmin commands and permission checks.
-- `scripts/ai/` - chat, questions, images, and Ollama integrations.
+- `scripts/ai/` - chat, questions, images, and AI provider integrations.
 - `scripts/core/` - config, storage, random helpers, UI builders, services, and shared utils.
 - `scripts/economy/` - Nanacoins, inventory, boosts, lootboxes, and arcade rewards.
 - `scripts/games/` - Forca, RPG/Trivia, duels, boss events, menus, and game data loaders.
@@ -204,7 +174,7 @@ These files are local runtime state and should not contain source code configura
 - `scripts/features/` - small engagement features.
 - `data/config/` and `data/games/` - editable static config and game data.
 - `data/policies/` - local persona and image policy files.
-- `local/` - ignored machine-local files such as Ollama Modelfile and secrets.
+- `local/` - ignored machine-local files and secrets.
 - `tools/` - manual utilities and local startup scripts.
 - `examples/` - public templates for local files.
 - `tests/` - `node:test` coverage for config, permissions, economy, games, and interactions.
@@ -246,13 +216,7 @@ Run:
 npm start
 ```
 
-Regenerate the Ollama model:
-
-```powershell
-npm run ollama:create
-```
-
-Run the manual Trivia/Ollama diagnostic:
+Run the manual Trivia/AI diagnostic:
 
 ```powershell
 npm run test:trivia

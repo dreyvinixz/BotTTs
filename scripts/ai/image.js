@@ -3,7 +3,7 @@ const path = require("path");
 const { AttachmentBuilder } = require("discord.js");
 const config = require("../core/config");
 const { assertForgeReady } = require("../core/services");
-const { limparResposta, pedirRespostaAoOllama } = require("./ollama");
+const { limparResposta, perguntarMensagensIa } = require("./question");
 
 function limparIdeiaImagem(texto) {
   return texto
@@ -78,10 +78,10 @@ Output: "cute astronaut cat, detailed space suit, centered composition, simple s
 `.trim();
 
   try {
-    const resposta = await pedirRespostaAoOllama([
+    const resposta = await perguntarMensagensIa([
       { role: "system", content: systemPrompt },
       { role: "user", content: ideia || ideiaOriginal }
-    ], { usarPoliticasDono: false });
+    ], { logLabel: "Imagem/IA" });
 
     const promptMelhorado = limparPromptImagem(resposta);
     if (promptMelhorado && promptMelhorado.length >= 20) {

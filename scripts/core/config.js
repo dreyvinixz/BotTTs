@@ -77,7 +77,12 @@ const config = {
 
 
 
-  QUESTION_PROVIDER: getEnvString("QUESTION_PROVIDER", "local").toLowerCase(),
+  AI_PROVIDER: getEnvString("AI_PROVIDER", process.env.OPENAI_API_KEY ? "openai" : getEnvString("QUESTION_PROVIDER", "gemini_cli")).toLowerCase(),
+  QUESTION_PROVIDER: getEnvString("QUESTION_PROVIDER", process.env.OPENAI_API_KEY ? "openai" : "gemini_cli").toLowerCase(),
+  OPENAI_API_KEY: process.env.OPENAI_API_KEY,
+  OPENAI_MODEL: getEnvString("OPENAI_MODEL", "gpt-4.1-mini"),
+  OPENAI_TIMEOUT_MS: getEnvNumber("OPENAI_TIMEOUT_MS", 60_000),
+  OPENAI_MAX_OUTPUT_TOKENS: getEnvNumber("OPENAI_MAX_OUTPUT_TOKENS", 700),
   GEMINI_CLI_MODEL: getEnvString("GEMINI_CLI_MODEL", "auto").toLowerCase(),
   GEMINI_CLI_TIMEOUT_MS: getEnvNumber("GEMINI_CLI_TIMEOUT_MS", 120_000),
 
@@ -103,6 +108,7 @@ const config = {
   VIDEO_API_TIMEOUT_MS: getEnvNumber("VIDEO_API_TIMEOUT_MS", 15_000),
   VIDEO_DOWNLOAD_TIMEOUT_MS: getEnvNumber("VIDEO_DOWNLOAD_TIMEOUT_MS", 60_000),
   MAX_VIDEO_BYTES: getEnvNumber("MAX_VIDEO_BYTES", 25 * 1024 * 1024),
+  DISCORD_UPLOAD_MAX_BYTES: getEnvNumber("DISCORD_UPLOAD_MAX_BYTES", Math.min(getEnvNumber("MAX_VIDEO_BYTES", 25 * 1024 * 1024), 10 * 1024 * 1024)),
   VIDEO_MAX_FAILURES: getEnvNumber("VIDEO_MAX_FAILURES", 5),
   VIDEO_RECENT_HISTORY_LIMIT: getEnvNumber("VIDEO_RECENT_HISTORY_LIMIT", 3),
   VIDEO_HISTORY_LIMIT: getEnvNumber("VIDEO_HISTORY_LIMIT", 50),
@@ -137,6 +143,7 @@ config.paths = {
   timers: TIMERS_PATH,
   inventory: path.resolve(DATA_DIR, "inventory.json"),
   market: path.resolve(DATA_DIR, "market.json"),
+  triviaHistory: path.resolve(DATA_DIR, "triviaHistory.json"),
   videos: path.resolve(ROOT_DIR, getEnvString("VIDEOS_PATH", path.join("data", "videos.json"))),
   videoHistory: path.resolve(ROOT_DIR, getEnvString("VIDEO_HISTORY_PATH", path.join("data", "videoHistory.json"))),
   videoTmp: path.resolve(ROOT_DIR, getEnvString("VIDEO_TMP_DIR", path.join("data", "tmp", "videos")))

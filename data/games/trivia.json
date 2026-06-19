@@ -55,26 +55,26 @@
   "difficulties": {
     "facil": {
       "name": "Fácil",
-      "win": 40,
+      "win": 25,
       "lose": 0,
       "promptMod": "A pergunta deve ser EXTREMAMENTE FÁCIL e óbvia. Nível ensino fundamental."
     },
     "medio": {
       "name": "Médio",
-      "win": 80,
-      "lose": 20,
+      "win": 50,
+      "lose": 25,
       "promptMod": "A pergunta deve ter dificuldade média. Nível de conhecimentos normais."
     },
     "dificil": {
       "name": "Difícil",
-      "win": 150,
-      "lose": 60,
+      "win": 100,
+      "lose": 75,
       "promptMod": "A pergunta deve ser muito difícil e específica. Nível de vestibular ou especialista."
     },
     "infernal": {
       "name": "Infernal",
-      "win": 300,
-      "lose": 150,
+      "win": 150,
+      "lose": 200,
       "promptMod": "Seja cruel e capcioso. A pergunta deve ser quase impossível, um detalhe minúsculo ou uma pegadinha."
     }
   },
@@ -1386,6 +1386,56 @@
             "Triscaidecafobia"
           ],
           "img": "palindrome word mirror typography"
+        },
+        {
+          "p": "Qual cidade-sede olímpica de 1900 teve competições ligadas à Exposição Universal?",
+          "v": "Paris",
+          "f": [
+            "Londres",
+            "Atenas",
+            "Saint Louis"
+          ],
+          "img": "1900 Paris exposition universal old olympic venue"
+        },
+        {
+          "p": "Qual enciclopédia iluminista teve Diderot como um de seus principais organizadores?",
+          "v": "Encyclopédie",
+          "f": [
+            "Britannica",
+            "Larousse",
+            "Brockhaus"
+          ],
+          "img": "18th century encyclopedie volumes enlightenment study"
+        },
+        {
+          "p": "Qual palavra designa medo irracional de palavras longas, ironicamente muito longa?",
+          "v": "Hipopotomonstrosesquipedaliofobia",
+          "f": [
+            "Amaxofobia",
+            "Coulrofobia",
+            "Talassofobia"
+          ],
+          "img": "very long word printed on paper humorous dictionary"
+        },
+        {
+          "p": "Qual calendário foi adotado pela Rússia soviética apenas em 1918?",
+          "v": "Gregoriano",
+          "f": [
+            "Juliano",
+            "Hebraico",
+            "Revolucionário francês"
+          ],
+          "img": "old Russian calendar pages 1918 date change"
+        },
+        {
+          "p": "Qual idioma usa o alfabeto georgiano mkhedruli?",
+          "v": "Georgiano",
+          "f": [
+            "Armênio",
+            "Azeri",
+            "Ossétio"
+          ],
+          "img": "Georgian mkhedruli script on parchment"
         }
       ]
     },
@@ -2696,6 +2746,56 @@
             "Lei das XII Tábuas"
           ],
           "img": "Code of Hammurabi stele Louvre"
+        },
+        {
+          "p": "Qual tratado de 843 dividiu o Império Carolíngio entre os netos de Carlos Magno?",
+          "v": "Tratado de Verdun",
+          "f": [
+            "Tratado de Tordesilhas",
+            "Tratado de Utrecht",
+            "Paz de Augsburgo"
+          ],
+          "img": "medieval map Carolingian empire division treaty"
+        },
+        {
+          "p": "Qual batalha de 732 é tradicionalmente associada à vitória de Carlos Martel?",
+          "v": "Tours",
+          "f": [
+            "Hastings",
+            "Bouvines",
+            "Agincourt"
+          ],
+          "img": "early medieval battle Tours Charles Martel cavalry"
+        },
+        {
+          "p": "Qual conferência de 1884-1885 formalizou regras da partilha colonial da África?",
+          "v": "Conferência de Berlim",
+          "f": [
+            "Conferência de Viena",
+            "Conferência de Potsdam",
+            "Conferência de Bandung"
+          ],
+          "img": "Berlin conference 1884 colonial Africa map table"
+        },
+        {
+          "p": "Qual civilização construiu a capital Tenochtitlán?",
+          "v": "Asteca",
+          "f": [
+            "Inca",
+            "Maia",
+            "Tolteca"
+          ],
+          "img": "Tenochtitlan city lake Aztec civilization illustration"
+        },
+        {
+          "p": "Qual dinastia chinesa foi fundada por Zhu Yuanzhang em 1368?",
+          "v": "Ming",
+          "f": [
+            "Qing",
+            "Yuan",
+            "Song"
+          ],
+          "img": "Ming dynasty founder Zhu Yuanzhang imperial China 1368"
         }
       ]
     },
@@ -4006,6 +4106,56 @@
             "Interação de Van der Waals"
           ],
           "img": "covalent bond electron sharing molecule"
+        },
+        {
+          "p": "Qual constante relaciona energia e frequência na equação E = hf?",
+          "v": "Constante de Planck",
+          "f": [
+            "Constante de Boltzmann",
+            "Constante de Avogadro",
+            "Constante de Faraday"
+          ],
+          "img": "quantum physics equation E equals h f chalkboard"
+        },
+        {
+          "p": "Qual matemático formulou o teorema da incompletude em 1931?",
+          "v": "Kurt Gödel",
+          "f": [
+            "Alan Turing",
+            "David Hilbert",
+            "Bertrand Russell"
+          ],
+          "img": "Kurt Godel incompleteness theorem logic blackboard"
+        },
+        {
+          "p": "Qual partícula mediadora é associada à força eletromagnética?",
+          "v": "Fóton",
+          "f": [
+            "Glúon",
+            "Bóson W",
+            "Gráviton"
+          ],
+          "img": "photon electromagnetic force particle physics illustration"
+        },
+        {
+          "p": "Qual base nitrogenada substitui a timina no RNA?",
+          "v": "Uracila",
+          "f": [
+            "Adenina",
+            "Citosina",
+            "Guanina"
+          ],
+          "img": "RNA nucleotide uracil molecular structure"
+        },
+        {
+          "p": "Qual princípio impede dois férmions idênticos no mesmo estado quântico?",
+          "v": "Exclusão de Pauli",
+          "f": [
+            "Incerteza de Heisenberg",
+            "Equivalência",
+            "Correspondência"
+          ],
+          "img": "Pauli exclusion principle electrons quantum states diagram"
         }
       ]
     },
@@ -5316,6 +5466,56 @@
             "ARM Cortex-A8"
           ],
           "img": "AMD64 processor architecture chip"
+        },
+        {
+          "p": "Em Chrono Trigger, qual personagem é originalmente o príncipe Janus?",
+          "v": "Magus",
+          "f": [
+            "Frog",
+            "Crono",
+            "Robo"
+          ],
+          "img": "dark wizard Magus Chrono Trigger inspired pixel fantasy"
+        },
+        {
+          "p": "Qual protocolo de criptografia antecedeu o TLS na web?",
+          "v": "SSL",
+          "f": [
+            "SSH",
+            "IPsec",
+            "Kerberos"
+          ],
+          "img": "old web browser lock ssl protocol diagram"
+        },
+        {
+          "p": "Em Neon Genesis Evangelion, qual é o nome da organização que opera os EVAs?",
+          "v": "NERV",
+          "f": [
+            "SEELE",
+            "WILLE",
+            "Gendo Corp"
+          ],
+          "img": "anime command center giant robot organization"
+        },
+        {
+          "p": "Qual linguagem foi criada por Yukihiro Matsumoto?",
+          "v": "Ruby",
+          "f": [
+            "Python",
+            "Lua",
+            "Perl"
+          ],
+          "img": "Ruby programming language red gem code screen"
+        },
+        {
+          "p": "Qual console da Sega usava GD-ROM como mídia principal?",
+          "v": "Dreamcast",
+          "f": [
+            "Saturn",
+            "Mega Drive",
+            "Master System"
+          ],
+          "img": "Sega Dreamcast console GD-ROM disc retro gaming"
         }
       ]
     },
@@ -6626,6 +6826,56 @@
             "Harai-goshi"
           ],
           "img": "judo o-soto-gari throw dojo"
+        },
+        {
+          "p": "Qual país venceu a primeira Copa do Mundo de Rugby em 1987?",
+          "v": "Nova Zelândia",
+          "f": [
+            "Austrália",
+            "África do Sul",
+            "Inglaterra"
+          ],
+          "img": "1987 rugby world cup New Zealand trophy stadium"
+        },
+        {
+          "p": "No beisebol, quantos strikes eliminam um rebatedor?",
+          "v": "Três",
+          "f": [
+            "Dois",
+            "Quatro",
+            "Cinco"
+          ],
+          "img": "baseball batter strike count scoreboard"
+        },
+        {
+          "p": "Qual enxadrista perdeu para Deep Blue em 1997?",
+          "v": "Garry Kasparov",
+          "f": [
+            "Anatoly Karpov",
+            "Bobby Fischer",
+            "Vladimir Kramnik"
+          ],
+          "img": "chess grandmaster versus computer 1997 match"
+        },
+        {
+          "p": "Qual nadadora conquistou sete ouros em uma única Olimpíada antes de Phelps igualar?",
+          "v": "Nenhuma nadadora",
+          "f": [
+            "Dawn Fraser",
+            "Krisztina Egerszegi",
+            "Jenny Thompson"
+          ],
+          "img": "Olympic swimming medals tricky question"
+        },
+        {
+          "p": "Qual ciclista belga recebeu o apelido de Canibal?",
+          "v": "Eddy Merckx",
+          "f": [
+            "Fausto Coppi",
+            "Bernard Hinault",
+            "Miguel Indurain"
+          ],
+          "img": "Eddy Merckx Belgian cyclist vintage race bicycle"
         }
       ]
     },
@@ -7936,6 +8186,56 @@
             "Richard Strauss"
           ],
           "img": "Wagner Ring Cycle opera stage"
+        },
+        {
+          "p": "Qual compositor escreveu a ópera Wozzeck?",
+          "v": "Alban Berg",
+          "f": [
+            "Arnold Schoenberg",
+            "Anton Webern",
+            "Gustav Mahler"
+          ],
+          "img": "expressionist opera Wozzeck Alban Berg stage"
+        },
+        {
+          "p": "Qual intervalo tem exatamente seis semitons?",
+          "v": "Trítono",
+          "f": [
+            "Quarta justa",
+            "Quinta justa",
+            "Terça maior"
+          ],
+          "img": "music theory tritone six semitones piano keyboard"
+        },
+        {
+          "p": "Qual álbum de Miles Davis popularizou o jazz modal em 1959?",
+          "v": "Kind of Blue",
+          "f": [
+            "Bitches Brew",
+            "Sketches of Spain",
+            "Birth of the Cool"
+          ],
+          "img": "1959 jazz modal trumpet blue album studio"
+        },
+        {
+          "p": "Qual instrumento barroco é antecessor direto do piano?",
+          "v": "Cravo",
+          "f": [
+            "Alaúde",
+            "Órgão portativo",
+            "Viola da gamba"
+          ],
+          "img": "baroque harpsichord keyboard instrument ornate room"
+        },
+        {
+          "p": "Qual forma musical tem exposição, desenvolvimento e recapitulação?",
+          "v": "Forma sonata",
+          "f": [
+            "Fuga",
+            "Rondó",
+            "Passacaglia"
+          ],
+          "img": "classical music sonata form diagram score"
         }
       ]
     },
@@ -9246,6 +9546,56 @@
             "Omni Consumer Products"
           ],
           "img": "Blade Runner Tyrell Corporation futuristic city"
+        },
+        {
+          "p": "Qual filme de Akira Kurosawa inspirou diretamente The Magnificent Seven?",
+          "v": "Os Sete Samurais",
+          "f": [
+            "Rashomon",
+            "Yojimbo",
+            "Ran"
+          ],
+          "img": "seven samurai black and white cinema battlefield"
+        },
+        {
+          "p": "Qual técnica narrativa Rashomon tornou famosa no cinema mundial?",
+          "v": "Perspectivas contraditórias",
+          "f": [
+            "Plano-sequência único",
+            "Câmera subjetiva",
+            "Final circular"
+          ],
+          "img": "Rashomon multiple conflicting perspectives film scene"
+        },
+        {
+          "p": "Qual diretor assinou Persona, de 1966?",
+          "v": "Ingmar Bergman",
+          "f": [
+            "Federico Fellini",
+            "Michelangelo Antonioni",
+            "Andrei Tarkovsky"
+          ],
+          "img": "1960s art film Persona close faces black white"
+        },
+        {
+          "p": "Qual filme venceu a Palma de Ouro em 1994?",
+          "v": "Pulp Fiction",
+          "f": [
+            "Forrest Gump",
+            "O Piano",
+            "A Lista de Schindler"
+          ],
+          "img": "Cannes film festival 1994 Palme dOr cinema"
+        },
+        {
+          "p": "Qual série tem o episódio final chamado Felina?",
+          "v": "Breaking Bad",
+          "f": [
+            "Better Call Saul",
+            "The Sopranos",
+            "Lost"
+          ],
+          "img": "desert crime drama final episode atmosphere"
         }
       ]
     },
@@ -9396,6 +9746,196 @@
             "Epiderme"
           ],
           "img": "plant xylem water transport diagram"
+        },
+        {
+          "p": "Qual organela possui DNA próprio e cristas internas?",
+          "v": "Mitocôndria",
+          "f": [
+            "Lisossomo",
+            "Ribossomo",
+            "Complexo de Golgi"
+          ],
+          "img": "mitochondria cristae own DNA cell biology"
+        },
+        {
+          "p": "Qual estrutura vegetal regula trocas gasosas nas folhas?",
+          "v": "Estômato",
+          "f": [
+            "Xilema",
+            "Floema",
+            "Cutícula"
+          ],
+          "img": "leaf stomata microscope gas exchange"
+        },
+        {
+          "p": "Qual fase da mitose alinha cromossomos no plano equatorial?",
+          "v": "Metáfase",
+          "f": [
+            "Prófase",
+            "Anáfase",
+            "Telófase"
+          ],
+          "img": "mitosis metaphase chromosomes aligned microscope"
+        },
+        {
+          "p": "Qual imunoglobulina é mais associada a alergias imediatas?",
+          "v": "IgE",
+          "f": [
+            "IgA",
+            "IgG",
+            "IgM"
+          ],
+          "img": "allergy IgE antibody immune response diagram"
+        },
+        {
+          "p": "Qual doença genética envolve mutação no gene CFTR?",
+          "v": "Fibrose cística",
+          "f": [
+            "Hemofilia A",
+            "Anemia falciforme",
+            "Fenilcetonúria"
+          ],
+          "img": "CFTR gene cystic fibrosis medical illustration"
+        },
+        {
+          "p": "Qual tecido conduz açúcares nas plantas vasculares?",
+          "v": "Floema",
+          "f": [
+            "Xilema",
+            "Parênquima",
+            "Esclerênquima"
+          ],
+          "img": "plant phloem sugar transport vascular bundle"
+        },
+        {
+          "p": "Qual hormônio é produzido pelas células beta pancreáticas?",
+          "v": "Insulina",
+          "f": [
+            "Glucagon",
+            "Cortisol",
+            "Tiroxina"
+          ],
+          "img": "pancreatic beta cells insulin hormone diagram"
+        },
+        {
+          "p": "Qual filo inclui águas-vivas, corais e anêmonas?",
+          "v": "Cnidaria",
+          "f": [
+            "Porifera",
+            "Mollusca",
+            "Echinodermata"
+          ],
+          "img": "jellyfish coral anemone cnidaria marine life"
+        },
+        {
+          "p": "Qual molécula carrega aminoácidos até o ribossomo?",
+          "v": "tRNA",
+          "f": [
+            "mRNA",
+            "rRNA",
+            "DNA polimerase"
+          ],
+          "img": "transfer RNA carrying amino acid to ribosome"
+        },
+        {
+          "p": "Qual ligação une aminoácidos em proteínas?",
+          "v": "Ligação peptídica",
+          "f": [
+            "Ligação glicosídica",
+            "Ponte dissulfeto",
+            "Ligação fosfodiéster"
+          ],
+          "img": "peptide bond amino acids protein chemistry"
+        },
+        {
+          "p": "Qual estrutura bacteriana transfere plasmídeos na conjugação?",
+          "v": "Pili sexual",
+          "f": [
+            "Flagelo",
+            "Cápsula",
+            "Endósporo"
+          ],
+          "img": "bacterial conjugation sex pilus plasmid transfer"
+        },
+        {
+          "p": "Qual ciclo fixa carbono em plantas C3?",
+          "v": "Ciclo de Calvin",
+          "f": [
+            "Ciclo de Krebs",
+            "Ciclo de Cori",
+            "Ciclo da ureia"
+          ],
+          "img": "Calvin cycle carbon fixation chloroplast diagram"
+        },
+        {
+          "p": "Qual parte do néfron concentra urina por gradiente osmótico?",
+          "v": "Alça de Henle",
+          "f": [
+            "Glomérulo",
+            "Cápsula de Bowman",
+            "Túbulo proximal"
+          ],
+          "img": "nephron loop of Henle osmotic gradient"
+        },
+        {
+          "p": "Qual célula do sistema nervoso produz mielina no SNC?",
+          "v": "Oligodendrócito",
+          "f": [
+            "Célula de Schwann",
+            "Astrócito",
+            "Micróglia"
+          ],
+          "img": "oligodendrocyte myelin central nervous system neuron"
+        },
+        {
+          "p": "Qual pigmento transporta oxigênio em muitos moluscos e artrópodes?",
+          "v": "Hemocianina",
+          "f": [
+            "Hemoglobina",
+            "Mioglobina",
+            "Clorocruorina"
+          ],
+          "img": "hemocyanin blue blood mollusk arthropod oxygen transport"
+        },
+        {
+          "p": "Qual tipo de seleção favorece fenótipos extremos opostos?",
+          "v": "Disruptiva",
+          "f": [
+            "Estabilizadora",
+            "Direcional",
+            "Sexual"
+          ],
+          "img": "disruptive selection graph two peaks biology"
+        },
+        {
+          "p": "Qual sequência inicia tradução em mRNA na maioria dos casos?",
+          "v": "AUG",
+          "f": [
+            "UAA",
+            "UGA",
+            "UAG"
+          ],
+          "img": "mRNA start codon AUG ribosome translation"
+        },
+        {
+          "p": "Qual osso humano contém a sela túrcica?",
+          "v": "Esfenoide",
+          "f": [
+            "Etmoide",
+            "Temporal",
+            "Occipital"
+          ],
+          "img": "sphenoid bone sella turcica skull anatomy"
+        },
+        {
+          "p": "Qual parasita causa doença de Chagas?",
+          "v": "Trypanosoma cruzi",
+          "f": [
+            "Plasmodium vivax",
+            "Leishmania donovani",
+            "Toxoplasma gondii"
+          ],
+          "img": "Trypanosoma cruzi parasite Chagas disease microscope"
         }
       ]
     },
@@ -9546,6 +10086,196 @@
             "Voto de cabresto"
           ],
           "img": "rule of law scales justice government"
+        },
+        {
+          "p": "Qual tratado criou formalmente a União Europeia em 1993?",
+          "v": "Maastricht",
+          "f": [
+            "Lisboa",
+            "Roma",
+            "Nice"
+          ],
+          "img": "Maastricht treaty European Union document flags"
+        },
+        {
+          "p": "Qual sistema eleitoral elege representantes por listas partidárias proporcionais?",
+          "v": "Proporcional",
+          "f": [
+            "Distrital puro",
+            "Majoritário simples",
+            "Voto preferencial"
+          ],
+          "img": "proportional representation party list ballot"
+        },
+        {
+          "p": "Qual órgão da ONU pode aprovar sanções vinculantes?",
+          "v": "Conselho de Segurança",
+          "f": [
+            "Assembleia Geral",
+            "ECOSOC",
+            "Secretariado"
+          ],
+          "img": "UN Security Council chamber sanctions vote"
+        },
+        {
+          "p": "Qual filósofo associou soberania ao Leviatã?",
+          "v": "Thomas Hobbes",
+          "f": [
+            "John Locke",
+            "Rousseau",
+            "Montesquieu"
+          ],
+          "img": "Leviathan Hobbes political philosophy old book"
+        },
+        {
+          "p": "Qual princípio separa competências entre União, estados e municípios?",
+          "v": "Federalismo",
+          "f": [
+            "Unitarismo",
+            "Confederalismo",
+            "Bicameralismo"
+          ],
+          "img": "federalism diagram national state municipal powers"
+        },
+        {
+          "p": "Qual país não é membro permanente do Conselho de Segurança da ONU?",
+          "v": "Alemanha",
+          "f": [
+            "China",
+            "França",
+            "Rússia"
+          ],
+          "img": "UN permanent security council members flags"
+        },
+        {
+          "p": "Qual conceito descreve desenho eleitoral para favorecer um grupo?",
+          "v": "Gerrymandering",
+          "f": [
+            "Filibuster",
+            "Recall",
+            "Plebiscito"
+          ],
+          "img": "gerrymandering electoral district map strange shapes"
+        },
+        {
+          "p": "Qual documento inglês de 1215 limitou poderes do rei?",
+          "v": "Magna Carta",
+          "f": [
+            "Bill of Rights",
+            "Habeas Corpus Act",
+            "Petition of Right"
+          ],
+          "img": "Magna Carta parchment King John 1215"
+        },
+        {
+          "p": "Qual sistema tem chefe de governo dependente da confiança do parlamento?",
+          "v": "Parlamentarismo",
+          "f": [
+            "Presidencialismo",
+            "Monarquia absoluta",
+            "Diretório"
+          ],
+          "img": "parliament chamber prime minister confidence vote"
+        },
+        {
+          "p": "Qual teoria defende pesos e contrapesos entre poderes?",
+          "v": "Separação de poderes",
+          "f": [
+            "Razão de Estado",
+            "Mandato imperativo",
+            "Sufrágio censitário"
+          ],
+          "img": "checks and balances three branches government scale"
+        },
+        {
+          "p": "Qual organização substituiu o GATT em 1995?",
+          "v": "OMC",
+          "f": [
+            "OCDE",
+            "FMI",
+            "UNCTAD"
+          ],
+          "img": "World Trade Organization 1995 trade documents"
+        },
+        {
+          "p": "Qual tipo de maioria exige mais que metade dos membros totais?",
+          "v": "Maioria absoluta",
+          "f": [
+            "Maioria simples",
+            "Pluralidade",
+            "Consenso"
+          ],
+          "img": "parliament vote absolute majority seats"
+        },
+        {
+          "p": "Qual revolução popularizou o lema liberdade, igualdade e fraternidade?",
+          "v": "Francesa",
+          "f": [
+            "Russa",
+            "Americana",
+            "Gloriosa"
+          ],
+          "img": "French Revolution liberty equality fraternity crowd"
+        },
+        {
+          "p": "Qual conceito mede poder de influenciar sem coerção militar direta?",
+          "v": "Soft power",
+          "f": [
+            "Hard power",
+            "Realpolitik",
+            "Balança de poder"
+          ],
+          "img": "soft power culture diplomacy influence symbols"
+        },
+        {
+          "p": "Qual acordo de 1998 é central para a paz na Irlanda do Norte?",
+          "v": "Acordo da Sexta-Feira Santa",
+          "f": [
+            "Tratado de Belfast de 1921",
+            "Acordo de Camp David",
+            "Paz de Vestfália"
+          ],
+          "img": "Good Friday Agreement Northern Ireland peace document"
+        },
+        {
+          "p": "Qual país usa oficialmente o sistema político chamado democracia consociativa como exemplo clássico?",
+          "v": "Suíça",
+          "f": [
+            "Japão",
+            "México",
+            "Canadá"
+          ],
+          "img": "Swiss consociational democracy cantons parliament"
+        },
+        {
+          "p": "Qual tribunal internacional julga indivíduos por genocídio e crimes contra a humanidade?",
+          "v": "TPI",
+          "f": [
+            "CIJ",
+            "OMC",
+            "Corte Europeia"
+          ],
+          "img": "International Criminal Court courtroom The Hague"
+        },
+        {
+          "p": "Qual pensador é associado ao conceito de hegemonia cultural?",
+          "v": "Antonio Gramsci",
+          "f": [
+            "Max Weber",
+            "Émile Durkheim",
+            "Vilfredo Pareto"
+          ],
+          "img": "Antonio Gramsci cultural hegemony prison notebooks"
+        },
+        {
+          "p": "Qual mecanismo permite ao eleitor remover governante antes do fim do mandato?",
+          "v": "Recall",
+          "f": [
+            "Veto",
+            "Filibuster",
+            "Cláusula pétrea"
+          ],
+          "img": "recall election ballot removing governor"
         }
       ]
     },
@@ -9746,6 +10476,176 @@
             "Curva de demanda agregada"
           ],
           "img": "production possibilities frontier economics graph"
+        },
+        {
+          "p": "Qual índice mede concentração de mercado pela soma dos quadrados das participações?",
+          "v": "HHI",
+          "f": [
+            "IPCA",
+            "Gini",
+            "PMI"
+          ],
+          "img": "market concentration HHI formula economics board"
+        },
+        {
+          "p": "Qual curva representa trade-off clássico entre inflação e desemprego?",
+          "v": "Curva de Phillips",
+          "f": [
+            "Curva de Laffer",
+            "Curva IS",
+            "Curva de Lorenz"
+          ],
+          "img": "Phillips curve inflation unemployment graph"
+        },
+        {
+          "p": "Qual banco central controla a taxa Selic no Brasil?",
+          "v": "Banco Central do Brasil",
+          "f": [
+            "Tesouro Nacional",
+            "BNDES",
+            "Banco do Brasil"
+          ],
+          "img": "Brazil central bank Selic interest rate chart"
+        },
+        {
+          "p": "Qual métrica desconta depreciação do PIB para medir produto líquido?",
+          "v": "PIN",
+          "f": [
+            "PNB",
+            "PIB nominal",
+            "Renda disponível"
+          ],
+          "img": "net domestic product depreciation economics formula"
+        },
+        {
+          "p": "Qual viés faz investidores manterem posições perdedoras por aversão a realizar perda?",
+          "v": "Efeito disposição",
+          "f": [
+            "Viés de confirmação",
+            "Ancoragem",
+            "Efeito halo"
+          ],
+          "img": "behavioral finance losing stock position chart"
+        },
+        {
+          "p": "Qual escola defende preferência por regras monetárias e controle da oferta de moeda?",
+          "v": "Monetarista",
+          "f": [
+            "Keynesiana",
+            "Austríaca",
+            "Institucionalista"
+          ],
+          "img": "monetarism money supply central bank chart"
+        },
+        {
+          "p": "Qual instrumento representa dívida de curto prazo emitida por empresa?",
+          "v": "Commercial paper",
+          "f": [
+            "Ação ordinária",
+            "Debênture perpétua",
+            "ETF"
+          ],
+          "img": "commercial paper corporate short term debt document"
+        },
+        {
+          "p": "Qual conceito mede sensibilidade da demanda ao preço?",
+          "v": "Elasticidade-preço",
+          "f": [
+            "Utilidade marginal",
+            "Custo fixo",
+            "Multiplicador fiscal"
+          ],
+          "img": "price elasticity demand curve economics"
+        },
+        {
+          "p": "Qual modelo macroeconômico cruza os mercados de bens e monetário?",
+          "v": "IS-LM",
+          "f": [
+            "CAPM",
+            "Solow-Swan",
+            "Black-Scholes"
+          ],
+          "img": "IS LM macroeconomics graph intersecting curves"
+        },
+        {
+          "p": "Qual coeficiente mede desigualdade de renda entre 0 e 1?",
+          "v": "Gini",
+          "f": [
+            "Beta",
+            "Sharpe",
+            "Herfindahl"
+          ],
+          "img": "Gini coefficient Lorenz curve inequality graph"
+        },
+        {
+          "p": "Qual ativo costuma ser usado como proxy de taxa livre de risco em finanças?",
+          "v": "Título público",
+          "f": [
+            "Ação small cap",
+            "Criptomoeda",
+            "Opção de compra"
+          ],
+          "img": "government bond risk free rate finance"
+        },
+        {
+          "p": "Qual fenômeno ocorre quando custo médio cai conforme produção aumenta?",
+          "v": "Economia de escala",
+          "f": [
+            "Deseconomia externa",
+            "Estagflação",
+            "Arbitragem"
+          ],
+          "img": "economies of scale falling average cost curve"
+        },
+        {
+          "p": "Qual termo descreve desemprego ligado a mudanças tecnológicas ou setoriais?",
+          "v": "Estrutural",
+          "f": [
+            "Friccional",
+            "Sazonal",
+            "Cíclico"
+          ],
+          "img": "structural unemployment technology factory workers"
+        },
+        {
+          "p": "Qual razão financeira compara dívida líquida com EBITDA?",
+          "v": "Alavancagem",
+          "f": [
+            "Liquidez corrente",
+            "Margem bruta",
+            "ROE"
+          ],
+          "img": "net debt EBITDA leverage financial statement"
+        },
+        {
+          "p": "Qual fórmula de precificação de opções foi publicada por Black, Scholes e Merton?",
+          "v": "Black-Scholes",
+          "f": [
+            "CAPM",
+            "IS-LM",
+            "Gordon Growth"
+          ],
+          "img": "Black Scholes option pricing formula finance board"
+        },
+        {
+          "p": "Qual conceito descreve queda simultânea de produção e alta inflação?",
+          "v": "Estagflação",
+          "f": [
+            "Deflação",
+            "Desinflação",
+            "Hiperinflação"
+          ],
+          "img": "stagflation inflation recession graph economics"
+        },
+        {
+          "p": "Qual imposto tem alíquota média aumentando com a renda?",
+          "v": "Progressivo",
+          "f": [
+            "Regressivo",
+            "Proporcional",
+            "Específico"
+          ],
+          "img": "progressive tax income brackets chart"
         }
       ]
     },
@@ -9896,6 +10796,196 @@
             "Guimarães Rosa"
           ],
           "img": "Machado de Assis Bras Cubas old Brazilian novel"
+        },
+        {
+          "p": "Qual pintor assinou As Meninas em 1656?",
+          "v": "Diego Velázquez",
+          "f": [
+            "Goya",
+            "El Greco",
+            "Murillo"
+          ],
+          "img": "Las Meninas Velazquez baroque painting studio"
+        },
+        {
+          "p": "Qual movimento artístico valorizou automatismo psíquico e sonhos?",
+          "v": "Surrealismo",
+          "f": [
+            "Cubismo",
+            "Futurismo",
+            "Realismo"
+          ],
+          "img": "surrealism dream automatic writing painting"
+        },
+        {
+          "p": "Qual poeta escreveu Mensagem, obra nacionalista portuguesa?",
+          "v": "Fernando Pessoa",
+          "f": [
+            "Camões",
+            "Eça de Queirós",
+            "Cesário Verde"
+          ],
+          "img": "Portuguese poetry book Mensagem Fernando Pessoa"
+        },
+        {
+          "p": "Qual romance começa com Gregor Samsa transformado em inseto?",
+          "v": "A Metamorfose",
+          "f": [
+            "O Processo",
+            "O Castelo",
+            "Na Colônia Penal"
+          ],
+          "img": "Kafka metamorphosis bedroom insect surreal literature"
+        },
+        {
+          "p": "Qual escola literária brasileira tem Aluísio Azevedo como nome central?",
+          "v": "Naturalismo",
+          "f": [
+            "Arcadismo",
+            "Parnasianismo",
+            "Simbolismo"
+          ],
+          "img": "Brazilian naturalism literature old book Aluisio Azevedo"
+        },
+        {
+          "p": "Qual artista pintou Guernica?",
+          "v": "Pablo Picasso",
+          "f": [
+            "Salvador Dalí",
+            "Joan Miró",
+            "Georges Braque"
+          ],
+          "img": "Guernica Picasso monochrome antiwar mural"
+        },
+        {
+          "p": "Qual obra de Dante narra Inferno, Purgatório e Paraíso?",
+          "v": "Divina Comédia",
+          "f": [
+            "Decameron",
+            "Eneida",
+            "Orlando Furioso"
+          ],
+          "img": "Dante Divine Comedy inferno purgatory paradise manuscript"
+        },
+        {
+          "p": "Qual dramaturgo escreveu Esperando Godot?",
+          "v": "Samuel Beckett",
+          "f": [
+            "Eugène Ionesco",
+            "Bertolt Brecht",
+            "Jean Genet"
+          ],
+          "img": "Waiting for Godot minimalist stage two figures"
+        },
+        {
+          "p": "Qual movimento precedeu o Romantismo e valorizou razão e equilíbrio clássico?",
+          "v": "Neoclassicismo",
+          "f": [
+            "Barroco",
+            "Dadaísmo",
+            "Expressionismo"
+          ],
+          "img": "neoclassical art symmetry columns painting"
+        },
+        {
+          "p": "Qual escritora criou Orlando, romance sobre identidade e tempo?",
+          "v": "Virginia Woolf",
+          "f": [
+            "Jane Austen",
+            "Mary Shelley",
+            "George Eliot"
+          ],
+          "img": "Virginia Woolf Orlando novel time identity portrait"
+        },
+        {
+          "p": "Qual técnica usa pequenos pontos de cor pura justapostos?",
+          "v": "Pontilhismo",
+          "f": [
+            "Impasto",
+            "Gravura",
+            "Afresco"
+          ],
+          "img": "pointillism pure color dots painting close up"
+        },
+        {
+          "p": "Qual autor escreveu Cem Anos de Solidão?",
+          "v": "Gabriel García Márquez",
+          "f": [
+            "Mario Vargas Llosa",
+            "Jorge Luis Borges",
+            "Julio Cortázar"
+          ],
+          "img": "magical realism Macondo yellow butterflies novel"
+        },
+        {
+          "p": "Qual forma poética tradicional tem 14 versos?",
+          "v": "Soneto",
+          "f": [
+            "Haicai",
+            "Ode pindárica",
+            "Elegia"
+          ],
+          "img": "sonnet fourteen lines poetry manuscript"
+        },
+        {
+          "p": "Qual artista é associado às latas de sopa Campbell?",
+          "v": "Andy Warhol",
+          "f": [
+            "Roy Lichtenstein",
+            "Jackson Pollock",
+            "Mark Rothko"
+          ],
+          "img": "pop art Campbell soup cans gallery"
+        },
+        {
+          "p": "Qual movimento literário brasileiro teve a revista Klaxon como marco modernista?",
+          "v": "Modernismo",
+          "f": [
+            "Realismo",
+            "Simbolismo",
+            "Romantismo"
+          ],
+          "img": "Klaxon magazine Brazilian modernism 1922 art literature"
+        },
+        {
+          "p": "Qual escultor criou O Pensador?",
+          "v": "Auguste Rodin",
+          "f": [
+            "Donatello",
+            "Bernini",
+            "Brancusi"
+          ],
+          "img": "Rodin The Thinker bronze sculpture museum"
+        },
+        {
+          "p": "Qual autor russo escreveu Os Irmãos Karamázov?",
+          "v": "Dostoiévski",
+          "f": [
+            "Tolstói",
+            "Tchékhov",
+            "Gógol"
+          ],
+          "img": "Dostoevsky Brothers Karamazov Russian novel old book"
+        },
+        {
+          "p": "Qual pintor é associado à série Nenúfares?",
+          "v": "Claude Monet",
+          "f": [
+            "Édouard Manet",
+            "Paul Cézanne",
+            "Pierre Renoir"
+          ],
+          "img": "Claude Monet water lilies impressionist painting pond"
+        },
+        {
+          "p": "Qual termo designa pintura feita sobre reboco ainda úmido?",
+          "v": "Afresco",
+          "f": [
+            "Têmpera",
+            "Xilogravura",
+            "Litografia"
+          ],
+          "img": "fresco painting wet plaster Renaissance wall"
         }
       ]
     },
@@ -10046,6 +11136,196 @@
             "Voyager 2"
           ],
           "img": "Huygens probe landing Titan moon ESA"
+        },
+        {
+          "p": "Qual lua de Saturno tem lagos de metano líquido?",
+          "v": "Titã",
+          "f": [
+            "Encélado",
+            "Mimas",
+            "Japeto"
+          ],
+          "img": "Titan methane lakes Saturn moon orange haze"
+        },
+        {
+          "p": "Qual missão detectou ondas gravitacionais em 2015?",
+          "v": "LIGO",
+          "f": [
+            "Kepler",
+            "Gaia",
+            "Planck"
+          ],
+          "img": "LIGO gravitational waves detector arms 2015"
+        },
+        {
+          "p": "Qual tipo de estrela remanescente pode ter limite de Chandrasekhar?",
+          "v": "Anã branca",
+          "f": [
+            "Gigante vermelha",
+            "Pulsar",
+            "Buraco negro"
+          ],
+          "img": "white dwarf star Chandrasekhar limit astronomy"
+        },
+        {
+          "p": "Qual planeta tem rotação retrógrada e dia maior que o ano?",
+          "v": "Vênus",
+          "f": [
+            "Mercúrio",
+            "Urano",
+            "Netuno"
+          ],
+          "img": "Venus retrograde rotation day longer than year diagram"
+        },
+        {
+          "p": "Qual unidade equivale à distância que a luz percorre em um ano?",
+          "v": "Ano-luz",
+          "f": [
+            "Parsec",
+            "UA",
+            "Jansky"
+          ],
+          "img": "light year distance beam through space"
+        },
+        {
+          "p": "Qual observatório espacial mediu com precisão anisotropias da radiação cósmica de fundo?",
+          "v": "Planck",
+          "f": [
+            "Hubble",
+            "Chandra",
+            "Spitzer"
+          ],
+          "img": "Planck satellite cosmic microwave background map"
+        },
+        {
+          "p": "Qual linha espectral do hidrogênio tem comprimento de onda de 21 cm?",
+          "v": "Linha hiperfina",
+          "f": [
+            "H-alfa",
+            "Lyman-alfa",
+            "Balmer beta"
+          ],
+          "img": "hydrogen 21 centimeter radio astronomy line"
+        },
+        {
+          "p": "Qual região ao redor de um buraco negro impede retorno de luz?",
+          "v": "Horizonte de eventos",
+          "f": [
+            "Disco de acreção",
+            "Esfera de fótons",
+            "Jato relativístico"
+          ],
+          "img": "black hole event horizon light cannot escape"
+        },
+        {
+          "p": "Qual lei relaciona velocidade de recessão e distância de galáxias?",
+          "v": "Lei de Hubble-Lemaître",
+          "f": [
+            "Lei de Kepler",
+            "Lei de Tully-Fisher",
+            "Lei de Wien"
+          ],
+          "img": "galaxy redshift distance Hubble Lemaitre law graph"
+        },
+        {
+          "p": "Qual planeta-anão foi visitado pela missão New Horizons?",
+          "v": "Plutão",
+          "f": [
+            "Ceres",
+            "Éris",
+            "Haumea"
+          ],
+          "img": "New Horizons spacecraft Pluto flyby dwarf planet"
+        },
+        {
+          "p": "Qual processo alimenta a energia principal do Sol?",
+          "v": "Fusão nuclear",
+          "f": [
+            "Fissão nuclear",
+            "Combustão química",
+            "Decaimento alfa"
+          ],
+          "img": "sun core nuclear fusion proton chain"
+        },
+        {
+          "p": "Qual ponto orbital fica a cerca de 1,5 milhão km da Terra usado pelo JWST?",
+          "v": "L2",
+          "f": [
+            "L1",
+            "L4",
+            "L5"
+          ],
+          "img": "James Webb telescope L2 orbit diagram Earth Sun"
+        },
+        {
+          "p": "Qual classe inclui estrelas muito luminosas como Betelgeuse?",
+          "v": "Supergigante vermelha",
+          "f": [
+            "Anã marrom",
+            "Subanã azul",
+            "Cefeida clássica"
+          ],
+          "img": "Betelgeuse red supergiant star size comparison"
+        },
+        {
+          "p": "Qual fenômeno desloca linhas espectrais para comprimentos de onda maiores?",
+          "v": "Redshift",
+          "f": [
+            "Blueshift",
+            "Paralaxe",
+            "Aberração"
+          ],
+          "img": "redshift spectral lines moving to longer wavelength"
+        },
+        {
+          "p": "Qual objeto Messier é a Nebulosa do Caranguejo?",
+          "v": "M1",
+          "f": [
+            "M31",
+            "M42",
+            "M87"
+          ],
+          "img": "Crab Nebula Messier 1 supernova remnant"
+        },
+        {
+          "p": "Qual estrela é a mais brilhante do céu noturno aparente?",
+          "v": "Sírius",
+          "f": [
+            "Canopus",
+            "Vega",
+            "Arcturus"
+          ],
+          "img": "Sirius brightest night sky star constellation"
+        },
+        {
+          "p": "Qual fenômeno ocorre quando a Lua passa pela sombra da Terra?",
+          "v": "Eclipse lunar",
+          "f": [
+            "Eclipse solar",
+            "Trânsito",
+            "Ocultação estelar"
+          ],
+          "img": "lunar eclipse Moon entering Earth shadow diagram"
+        },
+        {
+          "p": "Qual missão europeia mapeia posições e movimentos de estrelas com alta precisão?",
+          "v": "Gaia",
+          "f": [
+            "Rosetta",
+            "BepiColombo",
+            "Solar Orbiter"
+          ],
+          "img": "Gaia spacecraft mapping Milky Way stars astrometry"
+        },
+        {
+          "p": "Qual limite marca onde o vento solar é freado pelo meio interestelar?",
+          "v": "Heliopausa",
+          "f": [
+            "Magnetopausa",
+            "Termopausa",
+            "Tropopausa"
+          ],
+          "img": "heliopause solar wind interstellar medium boundary"
         }
       ]
     }

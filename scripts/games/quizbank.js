@@ -1,9 +1,27 @@
 const config = require("../core/config");
 const { choice } = require("../core/random");
+const { readJsonFile, writeJsonFileSync } = require("../core/storage");
 
 const triviaData = config.static.games.trivia;
 const BANCO_PERGUNTAS = triviaData.questions || {};
-const perguntasUsadas = new Map();
+let disableSavingForTests = false;
+
+function loadHistory() {
+  const raw = readJsonFile(config.paths.triviaHistory, {});
+  if (!raw || typeof raw !== "object" || Array.isArray(raw)) return new Map();
+  return new Map(
+    Object.entries(raw)
+      .filter(([, value]) => Array.isArray(value))
+      .map(([key, value]) => [key, value.filter(Number.isInteger)])
+  );
+}
+
+const perguntasUsadas = loadHistory();
+
+function saveHistory() {
+  if (disableSavingForTests) return;
+  writeJsonFileSync(config.paths.triviaHistory, Object.fromEntries(perguntasUsadas));
+}
 
 function getPerguntas(temaKey, diffKey) {
   return BANCO_PERGUNTAS[temaKey]?.[diffKey] || [];
@@ -30,16 +48,30 @@ function getPerguntaAleatoria(channelId, temaKey, diffKey, rng = Math.random) {
   const idx = choice(disponiveis, rng);
   perguntasUsadas.get(key).push(idx);
   while (perguntasUsadas.get(key).length > historyLimit) perguntasUsadas.get(key).shift();
+  saveHistory();
 
   return perguntas[idx];
 }
 
 function resetPerguntasUsadas() {
   perguntasUsadas.clear();
+  saveHistory();
 }
 
 module.exports = {
   BANCO_PERGUNTAS,
   getPerguntaAleatoria,
-  resetPerguntasUsadas
+  resetPerguntasUsadas,
+  __disableSavingForTests(value = true) {
+    disableSavingForTests = value;
+  },
+  __getHistoryForTests() {
+    return Object.fromEntries(perguntasUsadas);
+  },
+  __setHistoryForTests(value = {}) {
+    perguntasUsadas.clear();
+    for (const [key, history] of Object.entries(value)) {
+      perguntasUsadas.set(key, Array.isArray(history) ? history : []);
+    }
+  }
 };

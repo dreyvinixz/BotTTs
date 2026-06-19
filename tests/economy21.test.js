@@ -10,6 +10,7 @@ const activeEffects = require("../scripts/economy/activeEffects");
 const {
   fortifyWeapon,
   craftWeapon,
+  buildCraftWeaponsPayload,
   rerollLegendaryAbility
 } = require("../scripts/economy/forge");
 const boss = require("../scripts/games/boss");
@@ -142,6 +143,14 @@ test("crafting consumes coins and materials and creates an unfortified weapon", 
 
   const blocked = craftWeapon("crafter", "arma_sem_receita");
   assert.equal(blocked.ok, false);
+});
+
+test("craft weapons payload exposes the same craft UI used by !armas", () => {
+  const payload = buildCraftWeaponsPayload("crafter");
+
+  assert.equal(payload.embeds[0].data.title, "⚙️ Craftar Arma");
+  assert.equal(payload.components[0].components[0].data.custom_id, "forge_select_craft");
+  assert.equal(payload.components[1].components[0].data.custom_id, "forge_home");
 });
 
 test("legendary reroll consumes nuclei and replaces chance inside configured range", () => {

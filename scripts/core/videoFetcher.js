@@ -91,6 +91,23 @@ async function resolveDirectMp4Url(instagramUrl, options = {}) {
 
   for (let attempt = 0; attempt <= retries; attempt += 1) {
     try {
+      if (options.providerUrl) {
+        const response = await fetchWithTimeout(options.providerUrl, {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({ url: sourceUrl })
+        }, options.providerTimeoutMs || config.VIDEO_PROVIDER_TIMEOUT_MS || config.VIDEO_DOWNLOAD_TIMEOUT_MS, options.fetchImpl || fetch);
+
+        if (!response.ok) {
+          throw new Error(`Provider respondeu status ${response.status}.`);
+        }
+
+        const payload = await response.json();
+        const directUrl = extractDirectMp4Url(payload);
+        if (!directUrl) throw new Error("Provider não retornou URL direta do MP4.");
+        return assertHttpsUrl(directUrl, "URL direta do MP4").toString();
+      }
+
       const payload = await instagramGetUrl(sourceUrl);
       
       if (!payload || !payload.url_list || payload.url_list.length === 0) {

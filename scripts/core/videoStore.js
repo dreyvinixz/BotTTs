@@ -41,6 +41,45 @@ function saveVideos(videos, options = {}) {
   writeJsonFileSync(options.videosPath || config.paths.videos, videos);
 }
 
+function nextVideoId(videos) {
+  const maxNumber = videos.reduce((max, video) => {
+    const match = String(video.id || "").match(/^video_(\d+)$/);
+    const number = match ? Number(match[1]) : 0;
+    return Number.isFinite(number) && number > max ? number : max;
+  }, 0);
+  return `video_${String(maxNumber + 1).padStart(3, "0")}`;
+}
+
+function addVideoUrl(url, meta = {}, options = {}) {
+  const normalizedUrl = String(url || "").trim();
+  if (!normalizedUrl) return { added: false, video: null, reason: "invalid_url" };
+
+  const videos = readVideos(options);
+  const existing = videos.find((video) => video.url === normalizedUrl);
+  if (existing) {
+    return { added: false, video: existing, reason: "duplicate_url" };
+  }
+
+  const video = normalizeVideo({
+    id: meta.id || nextVideoId(videos),
+    url: normalizedUrl,
+    active: meta.active !== false,
+    title: meta.title || "",
+    tags: Array.isArray(meta.tags) ? meta.tags : [],
+    lastSentAt: meta.lastSentAt || null,
+    failures: 0,
+    cachedDirectUrl: null,
+    cachedAt: null,
+    addedAt: meta.addedAt || Date.now(),
+    addedBy: meta.addedBy || null,
+    source: meta.source || "manual"
+  }, videos.length);
+
+  videos.push(video);
+  saveVideos(videos, options);
+  return { added: true, video };
+}
+
 function readHistory(options = {}) {
   const filePath = options.historyPath || config.paths.videoHistory;
   const history = readJsonFile(filePath, []);
@@ -119,6 +158,7 @@ module.exports = {
   normalizeVideo,
   readVideos,
   saveVideos,
+  addVideoUrl,
   readHistory,
   saveHistory,
   selectVideo,

@@ -1,6 +1,6 @@
 const fs = require("fs");
 const config = require("../core/config");
-const { limparResposta, pedirRespostaAoOllama } = require("./ollama");
+const { limparResposta, perguntarMensagensIa } = require("./question");
 
 const chatCache = new Map();
 const userCooldown = new Map();
@@ -122,7 +122,7 @@ async function extrairFofocas(channelId) {
   ];
 
   try {
-    const resposta = await pedirRespostaAoOllama(prompt);
+    const resposta = await perguntarMensagensIa(prompt, { logLabel: "Fofoca/IA" });
     const invalida = resposta.toUpperCase().includes("NADA")
       || resposta.toLowerCase().includes("não há")
       || resposta.toLowerCase().includes("não contém");
@@ -180,10 +180,10 @@ Use a configuração principal do dono do bot que foi enviada antes deste contex
   ];
 }
 
-async function responderComOllama(message, motivo) {
+async function responderComIa(message, motivo) {
   await message.channel.sendTyping();
   const contexto = await montarContexto(message, motivo);
-  const respostaBruta = await pedirRespostaAoOllama(contexto);
+  const respostaBruta = await perguntarMensagensIa(contexto, { logLabel: "Chat/IA" });
   let resposta = limparResposta(respostaBruta);
 
   resposta = resposta.replace(/^(?:Nana|BotBanana|[^:]+)\s*[:]\s*/i, "");
@@ -249,14 +249,14 @@ async function maybeResponderEspontaneo(message) {
   console.log(`💬 Respondendo ao usuário @${message.author.username} no canal #${message.channel.name} (Motivo: ${decisao.motivo})...`);
 
   try {
-    await responderComOllama(message, decisao.motivo);
+    await responderComIa(message, decisao.motivo);
     console.log(`✅ Resposta enviada para @${message.author.username} com sucesso.`);
   } catch (err) {
-    console.log("🔥 Erro ao responder com Ollama (espontâneo):", err.message);
+    console.log("🔥 Erro ao responder com IA (espontâneo):", err.message);
 
     if (message.mentions.has(message.client.user)) {
       await message.reply({
-        content: "Deu erro aqui. Vê se o Ollama está aberto.",
+        content: "Deu erro aqui ao chamar a IA. Confere se a chave da OpenAI está configurada.",
         allowedMentions: {
           repliedUser: false,
           parse: []

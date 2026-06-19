@@ -83,10 +83,10 @@
       "type": "buff",
       "buff": "escudoEspinhos",
       "durationMs": 7200000,
-      "cost": 1000,
+      "cost": 5000,
       "label": "Escudo de Espinhos (2 horas)",
       "menuLabel": "Escudo de Espinhos",
-      "description": "Se ladrão falhar, ele te paga 10% do dinheiro dele (2h) - 1k",
+      "description": "Se ladrão falhar, ele te paga 10% do dinheiro dele (2h) - 5k",
       "emoji": "🛡️"
     },
     "pe_coelho": {
@@ -146,7 +146,10 @@
       "maxPrice": 900,
       "targetStock": 60,
       "repairValue": 5,
-      "allowedRarities": ["comum", "raro"],
+      "allowedRarities": [
+        "comum",
+        "raro"
+      ],
       "emoji": "🪨",
       "label": "Pedra de Amolar",
       "menuLabel": "Pedra de Amolar",
@@ -160,7 +163,10 @@
       "maxPrice": 2200,
       "targetStock": 30,
       "repairValue": 7,
-      "allowedRarities": ["raro", "epico"],
+      "allowedRarities": [
+        "raro",
+        "epico"
+      ],
       "emoji": "🔮",
       "label": "Fragmento de Mana",
       "menuLabel": "Fragmento de Mana",
@@ -174,7 +180,10 @@
       "maxPrice": 4500,
       "targetStock": 15,
       "repairValue": 10,
-      "allowedRarities": ["epico", "lendario"],
+      "allowedRarities": [
+        "epico",
+        "lendario"
+      ],
       "emoji": "✨",
       "label": "Essência Rara",
       "menuLabel": "Essência Rara",
@@ -188,7 +197,9 @@
       "maxPrice": 15000,
       "targetStock": 5,
       "repairValue": 15,
-      "allowedRarities": ["lendario"],
+      "allowedRarities": [
+        "lendario"
+      ],
       "emoji": "🌟",
       "label": "Núcleo Lendário",
       "menuLabel": "Núcleo Lendário",
@@ -202,7 +213,9 @@
       "menuLabel": "Estandarte de Guerra",
       "description": "Aumenta em 5% a chance geral de sucesso da Raid atual.",
       "emoji": "🚩",
-      "effect": { "attackChanceBonus": 0.05 }
+      "effect": {
+        "attackChanceBonus": 0.05
+      }
     },
     "mapa_tesouro": {
       "type": "raid_consumable",
@@ -212,7 +225,9 @@
       "menuLabel": "Mapa do Tesouro",
       "description": "Permite atingir até 5 alvos adicionais na Raid atual.",
       "emoji": "🗺️",
-      "effect": { "maxTargetsBonus": 5 }
+      "effect": {
+        "maxTargetsBonus": 5
+      }
     },
     "ariete": {
       "type": "raid_consumable",
@@ -222,7 +237,9 @@
       "menuLabel": "Aríete",
       "description": "Reduz parte do bônus defensivo do servidor alvo.",
       "emoji": "🪵",
-      "effect": { "defenseReduction": 0.08 }
+      "effect": {
+        "defenseReduction": 0.08
+      }
     },
     "escudo_servidor": {
       "type": "raid_consumable",
@@ -232,7 +249,9 @@
       "menuLabel": "Escudo do Servidor",
       "description": "Aumenta em 10% a resistência contra a Raid atual.",
       "emoji": "🛡️",
-      "effect": { "defenseChanceBonus": 0.10 }
+      "effect": {
+        "defenseChanceBonus": 0.1
+      }
     },
     "cofre_reforcado": {
       "type": "raid_consumable",
@@ -242,7 +261,9 @@
       "menuLabel": "Cofre Reforçado",
       "description": "Reduz em 30% o limite máximo de perda por usuário durante a Raid.",
       "emoji": "🏦",
-      "effect": { "maxLossReduction": 0.30 }
+      "effect": {
+        "maxLossReduction": 0.3
+      }
     },
     "sentinela": {
       "type": "raid_consumable",
@@ -252,7 +273,17 @@
       "menuLabel": "Sentinela",
       "description": "Mostra uma estimativa da força ofensiva da Raid inimiga.",
       "emoji": "👁️",
-      "effect": { "revealAttackPower": true }
+      "effect": {
+        "revealAttackPower": true
+      }
+    },
+    "boss_loot_2x": {
+      "type": "item",
+      "cost": 2000,
+      "label": "Boost Boss 2x (1 uso)",
+      "menuLabel": "Boost Boss 2x",
+      "description": "Dobra todos os itens materiais dropados do próximo World Boss derrotado! (Consumido) - 2k",
+      "emoji": "🐉"
     }
   },
   "menuOrder": [
@@ -269,6 +300,7 @@
     "acido_corrosivo",
     "invocar_miniboss",
     "invocar_boss",
+    "boss_loot_2x",
     "pedra_amolar",
     "fragmento_mana",
     "essencia_rara",

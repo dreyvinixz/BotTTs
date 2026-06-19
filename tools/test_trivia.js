@@ -1,13 +1,13 @@
-const { pedirRespostaAoOllama, limparResposta } = require("../scripts/ai/ollama");
+const { perguntarMensagensIa, limparResposta } = require("../scripts/ai/question");
 const config = require("../scripts/core/config");
 
 async function test() {
-  console.log("Iniciando teste manual de integração do Ollama...");
+  console.log("Iniciando teste manual de integração da IA...");
 
   const diffObj = config.static.games.trivia.difficulties.medio;
   const themeObj = config.static.games.trivia.themes.ciencia;
 
-  const promptOllama = `
+  const prompt = `
 Você é o apresentador de um jogo de conhecimentos gerais estilo Show do Milhão.
 Diretriz de Tema: ${themeObj.promptMod}
 Dificuldade solicitada: ${diffObj.promptMod}
@@ -22,9 +22,9 @@ FALSA_3: [1 resposta incorreta CURTA (máximo 5 palavras)]
   `.trim();
 
   try {
-    const resposta = await pedirRespostaAoOllama(
-      [{ role: "user", content: promptOllama }],
-      { usarPoliticasDono: false, generationOptions: { num_predict: 400 } }
+    const resposta = await perguntarMensagensIa(
+      [{ role: "user", content: prompt }],
+      { logLabel: "Trivia/IA" }
     );
 
     console.log("=== RAW RESPONSE ===");
@@ -40,7 +40,7 @@ FALSA_3: [1 resposta incorreta CURTA (máximo 5 palavras)]
     console.log("Regex match para PROMPT_IMAGEM:", !!pImgMatch);
     console.log("Regex match para VERDADEIRA:", !!vMatch);
   } catch (err) {
-    console.error("Erro ao chamar Ollama:", err);
+    console.error("Erro ao chamar IA:", err);
   }
 }
 

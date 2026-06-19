@@ -6,6 +6,7 @@ const { execFile } = require("child_process");
 const config = require("../core/config");
 
 const execFileAsync = util.promisify(execFile);
+let openaiClient = null;
 
 function isPerguntaMapasPathOfExile(texto) {
   const lower = texto.toLowerCase();
@@ -42,6 +43,13 @@ ${texto}
 `.trim();
 }
 
+function limparResposta(texto) {
+  return String(texto || "")
+    .replace(/<think>[\s\S]*?<\/think>/gi, "")
+    .replace(/\[\/?INST\]/gi, "")
+    .trim();
+}
+
 function limparAvisosGeminiCli(texto) {
   return (texto || "")
     .split(/\r?\n/)
@@ -75,13 +83,63 @@ function logGeminiTokenStats(stats) {
   console.log("📊 [Question/Gemini CLI] Restante/cota diária: o Gemini CLI não expõe saldo restante no output; só consumo desta chamada.");
 }
 
-async function perguntarGeminiCli(texto) {
+function getOpenAIClient() {
+  if (!config.OPENAI_API_KEY) {
+    throw new Error("OPENAI_API_KEY não configurada.");
+  }
+  if (!openaiClient) {
+    const OpenAI = require("openai");
+    openaiClient = new OpenAI({
+      apiKey: config.OPENAI_API_KEY,
+      timeout: config.OPENAI_TIMEOUT_MS
+    });
+  }
+  return openaiClient;
+}
+
+function extractOpenAIOutputText(response) {
+  if (response?.output_text) return response.output_text.trim();
+  const parts = [];
+  for (const item of response?.output || []) {
+    for (const content of item.content || []) {
+      if (content.type === "output_text" && content.text) parts.push(content.text);
+      if (typeof content.text === "string") parts.push(content.text);
+    }
+  }
+  return parts.join("").trim();
+}
+
+async function executarOpenAI(promptText, logLabel = "OpenAI") {
   const startTime = Date.now();
-  console.log(`❓ [Question/Gemini CLI] Iniciando. Modelo: ${config.GEMINI_CLI_MODEL || "auto"}. Pergunta: "${texto.slice(0, 140)}"`);
+  console.log(`❓ [${logLabel}] Iniciando. Modelo: ${config.OPENAI_MODEL}. Prompt: "${promptText.slice(0, 140)}"`);
+
+  const client = getOpenAIClient();
+  const response = await client.responses.create({
+    model: config.OPENAI_MODEL,
+    input: promptText,
+    max_output_tokens: config.OPENAI_MAX_OUTPUT_TOKENS
+  }, {
+    timeout: config.OPENAI_TIMEOUT_MS
+  });
+
+  const output = extractOpenAIOutputText(response);
+  if (!output) {
+    throw new Error("OpenAI não retornou resposta em texto.");
+  }
+
+  const latency = Date.now() - startTime;
+  const usage = response.usage || {};
+  console.log(`✅ [${logLabel}] Resposta recebida em ${latency}ms (${output.length} chars). Tokens: input=${usage.input_tokens ?? "?"}, output=${usage.output_tokens ?? "?"}, total=${usage.total_tokens ?? "?"}.`);
+  return output;
+}
+
+async function executarGeminiCli(promptText, logLabel = "Gemini CLI") {
+  const startTime = Date.now();
+  console.log(`❓ [${logLabel}] Iniciando. Modelo: ${config.GEMINI_CLI_MODEL || "auto"}. Prompt: "${promptText.slice(0, 140)}"`);
 
   const tempDir = await fs.promises.mkdtemp(path.join(os.tmpdir(), "bottts-gemini-"));
   const promptPath = path.join(tempDir, "prompt.txt");
-  await fs.promises.writeFile(promptPath, montarPromptQuestion(texto), "utf-8");
+  await fs.promises.writeFile(promptPath, promptText, "utf-8");
 
   const modelArgs = config.GEMINI_CLI_MODEL && config.GEMINI_CLI_MODEL !== "auto"
     ? ` --model ${JSON.stringify(config.GEMINI_CLI_MODEL)}`
@@ -128,22 +186,79 @@ async function perguntarGeminiCli(texto) {
   if (!output) {
     throw new Error((stderr || "Gemini CLI não retornou resposta.").trim());
   }
-  if (/BotTTs|discord\.js|@discordjs|fofocas\.json|gifs\.json|Stable Diffusion|Forge WebUI/i.test(output)
-    && !/BotTTs|discord|bot|c[oó]digo|projeto|reposit[oó]rio/i.test(texto)) {
-    throw new Error("Gemini CLI respondeu sobre o projeto local em vez da pergunta.");
-  }
 
   const latency = Date.now() - startTime;
-  console.log(`✅ [Question/Gemini CLI] Resposta recebida em ${latency}ms (${output.length} chars).`);
+  console.log(`✅ [${logLabel}] Resposta recebida em ${latency}ms (${output.length} chars).`);
   logGeminiTokenStats(parsed.stats);
   return output;
 }
 
+async function perguntarGeminiCli(texto) {
+  const output = await executarGeminiCli(montarPromptQuestion(texto), "Question/Gemini CLI");
+  if (/BotTTs|discord\.js|@discordjs|fofocas\.json|gifs\.json|Stable Diffusion|Forge WebUI/i.test(output)
+    && !/BotTTs|discord|bot|c[oó]digo|projeto|reposit[oó]rio/i.test(texto)) {
+    throw new Error("Gemini CLI respondeu sobre o projeto local em vez da pergunta.");
+  }
+  return output;
+}
+
+function messagesToPrompt(messages) {
+  return (messages || [])
+    .map((msg) => {
+      const role = String(msg.role || "user").toUpperCase();
+      return `[${role}]\n${msg.content || ""}`;
+    })
+    .join("\n\n")
+    .trim();
+}
+
+async function perguntarMensagensGemini(messages, options = {}) {
+  const promptText = messagesToPrompt(messages);
+
+  if (!promptText) {
+    throw new Error("Prompt vazio para Gemini CLI.");
+  }
+
+  return executarGeminiCli(promptText, options.logLabel || "AI/Gemini CLI");
+}
+
+async function perguntarIaPrompt(promptText, options = {}) {
+  const provider = (options.provider || config.AI_PROVIDER || "openai").toLowerCase();
+  const logLabel = options.logLabel || (provider === "gemini_cli" ? "AI/Gemini CLI" : "AI/OpenAI");
+
+  if (!promptText) {
+    throw new Error("Prompt vazio para IA.");
+  }
+
+  if (provider === "gemini_cli" || provider === "gemini") {
+    try {
+      return await executarGeminiCli(promptText, logLabel);
+    } catch (err) {
+      if (config.OPENAI_API_KEY) {
+        console.warn(`⚠️ [${logLabel}] Falhou (${err.message}). Usando OpenAI como fallback.`);
+        return executarOpenAI(promptText, logLabel.replace(/Gemini CLI|Gemini/i, "OpenAI"));
+      }
+      throw err;
+    }
+  }
+
+  if (provider === "openai") {
+    return executarOpenAI(promptText, logLabel);
+  }
+
+  throw new Error(`Provider de IA inválido: ${provider}`);
+}
+
+async function perguntarMensagensIa(messages, options = {}) {
+  const promptText = messagesToPrompt(messages);
+  return perguntarIaPrompt(promptText, options);
+}
+
 async function perguntarQuestion(texto) {
   try {
-    return await perguntarGeminiCli(texto);
+    return await perguntarIaPrompt(montarPromptQuestion(texto), { logLabel: "Question/IA" });
   } catch (err) {
-    console.warn(`⚠️ [Question/Gemini CLI] Falhou. Erro: ${err.message}`);
+    console.warn(`⚠️ [Question/IA] Falhou. Erro: ${err.message}`);
     throw err;
   }
 }
@@ -152,6 +267,10 @@ module.exports = {
   isPerguntaMapasPathOfExile,
   respostaMapasPathOfExile,
   perguntarQuestion,
+  perguntarIaPrompt,
+  perguntarMensagensIa,
   perguntarGeminiCli,
+  perguntarMensagensGemini,
+  limparResposta,
   montarPromptQuestion
 };

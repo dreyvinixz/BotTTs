@@ -20,6 +20,11 @@ function nextDelay(baseDelay = config.VIDEO_INTERVAL_MS, jitterMs = config.VIDEO
   return baseDelay + jitter;
 }
 
+function isUploadTooLargeError(err) {
+  const message = `${err?.message || ""} ${err?.rawError?.message || ""}`;
+  return err?.code === 40005 || /request entity too large|payload too large|file.*large/i.test(message);
+}
+
 async function resolveVideoChannels(client, channelIds = config.VIDEO_CHANNEL_IDS) {
   const channels = [];
   for (const channelId of channelIds) {
@@ -36,21 +41,26 @@ async function resolveVideoChannels(client, channelIds = config.VIDEO_CHANNEL_ID
 
 async function sendVideoToChannels(channels, video, filePath, bytes, options = {}) {
   const sentChannelIds = [];
+  let failedReason = null;
   const delayMs = options.channelDelayMs ?? config.VIDEO_CHANNEL_SEND_DELAY_MS;
   for (const channel of channels) {
     try {
       const attachment = new AttachmentBuilder(filePath, {
         name: `${video.id || "video"}.mp4`
       });
-      await channel.send({ files: [attachment] });
+      const sentMessage = await channel.send({ files: [attachment] });
       sentChannelIds.push(channel.id);
+      if (options.onSentMessage && sentMessage) {
+        await options.onSentMessage(sentMessage, { channel, video, bytes });
+      }
       if (delayMs > 0) await sleep(delayMs);
     } catch (err) {
+      if (isUploadTooLargeError(err)) failedReason = "upload_too_large";
       console.warn(`[videos] falha ao enviar ${video.id} no canal ${channel.id}: ${err.message}`);
     }
   }
 
-  return { sentChannelIds, bytes };
+  return { sentChannelIds, bytes, failedReason };
 }
 
 async function runVideoJob(client, options = {}) {
@@ -90,7 +100,7 @@ async function runVideoJob(client, options = {}) {
     }
 
     console.warn(`[videos] ${video.id} baixado, mas nenhum envio foi aceito pelo Discord.`);
-    return { ok: false, reason: "send_failed", videoId: video.id };
+    return { ok: false, reason: sent.failedReason || "send_failed", videoId: video.id };
   } catch (err) {
     recordVideoFailure(video.id, err.message, options.storeOptions || {});
     console.warn(`[videos] falha em ${video.id}: ${err.message}`);

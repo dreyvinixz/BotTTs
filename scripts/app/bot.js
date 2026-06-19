@@ -7,7 +7,7 @@ const {
   isPerguntaMapasPathOfExile,
   respostaMapasPathOfExile,
   perguntarQuestion,
-  perguntarGeminiCli
+  perguntarIaPrompt
 } = require("../ai/question");
 const {
   coletarGifs,
@@ -24,8 +24,9 @@ const { handleMarketCommand, handleMarketInteraction } = require("../economy/mar
 const { handleRaidCommand, handleRaidInteraction, scheduleExistingRaids } = require("../economy/raids");
 const { handleInventoryCommand, handleEquipWeaponCommand } = require("../economy/weapons");
 const { checkAndSendTip } = require("../features/tips");
+const { handleReelsCommand, handleReelsInteraction } = require("../features/reels");
 const { handleAdminCommand } = require("../admin/admin");
-const { startVideoScheduler, runVideoJobOnce } = require("../core/videoScheduler");
+const { startVideoScheduler } = require("../core/videoScheduler");
 
 function createClient() {
   return new Client({
@@ -52,7 +53,8 @@ function buildHelpEmbed() {
         '`!loja` - 🏪 Loja Oficial com **estoque virtual**, preços dinâmicos e **Lootboxes**.',
         '`!bolsa` - 📈 Bolsa de Valores real: compre, venda e lucre com especulação!',
         '`!raid` - ⚔️ Raid de Servidores: guerra econômica controlada.',
-        '`!inventario` / `!inv` - 🎒 Mostra itens, armas e acesso completo à **Forja**!'
+        '`!inventario` / `!inv` - 🎒 Mostra itens, armas e acesso completo à **Forja**!',
+        '`!armas` - ⚙️ Abre direto o craft de armas da Forja.'
       ].join('\n') },
       { name: '⚔️ Crime & Duelo', value: [
         '`!roubar <@user>` - 🥷 Tenta furtar Nanacoins de alguém.',
@@ -69,7 +71,7 @@ function buildHelpEmbed() {
         '`!question <texto>` - 🧠 Pergunta séria, resposta profissional.',
         '`!img <prompt>` - 🖼️ Gera imagem realista pelo Forge.',
         '`!anime <prompt>` - 🌸 Gera imagem em estilo anime pelo Forge.',
-        '`!reels` - 🎬 Envia um reel configurado como MP4 neste canal.',
+        '`!reels` - 🎬 Abre o painel para reel aleatório, link manual ou apagar o último reel do painel.',
         '`!f <texto>` - 🔊 Fala no canal de voz onde você está.',
         '`!clear [cmd] <num>` - 🧹 Apaga mensagens do bot ou comandos de usuários.'
       ].join('\n') }
@@ -80,9 +82,11 @@ function buildHelpEmbed() {
 function buildNewEmbed() {
   return new EmbedBuilder()
     .setColor('#00FF00') // Verde neon chamativo
-    .setTitle('🌟 ATUALIZAÇÃO: ECONOMIA 2.0 & RAIDS 🌟')
-    .setDescription('O servidor e o BotTTs sofreram um MEGA UPDATE focado na nova **Economia Global e PvP de Servidores**! Confira o que mudou:')
+    .setTitle('🌟 ATUALIZAÇÃO: PAINÉIS, FORJA & REELS 🌟')
+    .setDescription('O BotTTs ganhou atalhos mais práticos para reduzir spam de comando e deixar os fluxos importantes em interface.')
     .addFields(
+      { name: '🎬 Painel de Reels', value: 'Use `!reels` para abrir uma interface com **Reel Aleatório** pelo banco, envio por **link do Instagram** e botão para **apagar o último reel** enviado pelo painel no chat.' },
+      { name: '⚙️ Atalho de Armas', value: '`!armas` agora abre direto a UI de **Craftar Arma** da Forja, a mesma que existe dentro do `!inv`.' },
       { name: '📈 Bolsa de Valores & Loja Viva', value: 'Esqueça os preços fixos! A `!loja` agora possui **Estoque Virtual** que limita a demanda e oscila o preço. Use a `!bolsa` para vender seus itens a preços personalizados para a comunidade, lucrando com a especulação!' },
       { name: '⚒️ A Grande Forja e Crafting', value: 'Entre no seu `!inv` e visite a **Forja**. Você pode usar os materiais coletados (Pó Cósmico, Sucata, etc.) para **Reparar** armas, **Fortificar** atributos, ativar **Buffs** temporários ou até **Criar Armas** novas do zero! Cansado da habilidade de uma arma Lendária? Use o **Reroll**!' },
       { name: '⚔️ Raids entre Servidores', value: 'Use `!raid` para engajar em **guerras econômicas interservidores**. Reúna seus aliados, compre *Estandartes de Guerra* ou *Escudos do Servidor* e invada a economia de outra comunidade para roubar até 8% dos seus fundos!' },
@@ -127,12 +131,12 @@ async function handleTextCommand(message) {
 
   try {
     const prompt = `Responda em português do Brasil de forma direta, natural e curta.\n\n${texto}`;
-    const resposta = await perguntarGeminiCli(prompt);
+    const resposta = await perguntarIaPrompt(prompt, { logLabel: "Nana/IA" });
 
     return sendChunkedReply(message, resposta);
   } catch (err) {
     console.log("🔥 Erro no comando de texto:", err.message);
-    return message.reply("⚠️ Erro ao contatar a IA (Gemini).");
+    return message.reply("⚠️ Erro ao contatar a IA.");
   }
 }
 
@@ -142,8 +146,8 @@ async function handleQuestionCommand(message) {
     return message.reply("Digite a pergunta: `!question quais são os mapas de Path of Exile?`");
   }
 
-  if (config.QUESTION_PROVIDER !== "gemini_cli" && isPerguntaMapasPathOfExile(texto)) {
-    console.log("🧭 [Question/Fixo] Respondendo mapas de Path of Exile sem chamar LLM porque provider não é gemini_cli.");
+  if (config.AI_PROVIDER !== "gemini_cli" && isPerguntaMapasPathOfExile(texto)) {
+    console.log("🧭 [Question/Fixo] Respondendo mapas de Path of Exile sem chamar LLM.");
     return message.reply({
       content: respostaMapasPathOfExile(),
       allowedMentions: { repliedUser: false, parse: [] }
@@ -216,33 +220,6 @@ async function handleClearCommand(message, text) {
     console.error("🔥 Erro no comando !clear:", err);
     message.reply("⚠️ Erro ao limpar mensagens.");
   }
-}
-
-function formatReelsFailure(reason) {
-  const messages = {
-    already_running: "Já tem um envio de reel em andamento. Tenta de novo em instantes.",
-    no_videos: "Não tem nenhum vídeo ativo em `data/videos.json`.",
-    no_channels: "Não encontrei canal para enviar o reel.",
-    no_valid_channels: "Não consegui usar este canal para enviar o reel.",
-    send_failed: "Baixei o reel, mas o Discord recusou o upload.",
-    video_failed: "Falhou ao resolver ou baixar o reel. Marquei a falha no histórico do vídeo.",
-    job_error: "O ciclo manual de reel falhou."
-  };
-  return messages[reason] || "Não consegui enviar um reel agora.";
-}
-
-async function handleReelsCommand(message) {
-  const status = await message.reply("🎬 Buscando um reel para este canal...");
-  const result = await runVideoJobOnce(message.client, {
-    channels: [message.channel],
-    channelDelayMs: 0
-  });
-
-  if (result.ok) {
-    return status.delete().catch(() => null);
-  }
-
-  return status.edit(`❌ ${formatReelsFailure(result.reason)}`).catch(() => null);
 }
 
 async function handleMessage(message) {
@@ -333,6 +310,11 @@ async function handleMessage(message) {
 
   if (isCommand(message, ["!inventario", "!inv"])) {
     return handleInventoryCommand(message);
+  }
+
+  if (isCommand(message, ["!armas"])) {
+    const { handleCraftWeaponsCommand } = require("../economy/forge");
+    return handleCraftWeaponsCommand(message);
   }
 
   if (isCommand(message, ["!equipar"])) {
@@ -483,6 +465,7 @@ function start(options = {}) {
       
       if (await handleMarketInteraction(interaction)) return;
       if (await handleRaidInteraction(interaction)) return;
+      if (await handleReelsInteraction(interaction)) return;
 
       if (
         interaction.customId?.startsWith('boost_select_')

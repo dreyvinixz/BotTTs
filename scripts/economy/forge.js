@@ -242,6 +242,54 @@ function buildCraftDescription(userId, craftingRecipes) {
   }).filter(Boolean).join("\n\n");
 }
 
+function buildCraftWeaponsPayload(userId) {
+  const craftingRecipes = config.static.weapons?.crafting || {};
+  const craftableEntries = Object.entries(craftingRecipes)
+    .filter(([weaponId]) => {
+      const weaponDef = getWeaponDef(weaponId);
+      return weaponDef && weaponDef.craftEnabled !== false;
+    });
+
+  if (craftableEntries.length === 0) {
+    return { content: "Nenhuma receita de craft disponível no momento.", embeds: [], components: [] };
+  }
+
+  const embed = new EmbedBuilder()
+    .setColor("#9B59B6")
+    .setTitle("⚙️ Craftar Arma")
+    .setDescription("Escolha uma arma para forjar do zero.\n\n" + buildCraftDescription(userId, Object.fromEntries(craftableEntries)));
+
+  const row = new ActionRowBuilder().addComponents(
+    new StringSelectMenuBuilder()
+      .setCustomId("forge_select_craft")
+      .setPlaceholder("Escolha uma arma para craftar...")
+      .addOptions(craftableEntries.slice(0, 25).map(([wId]) => {
+        const status = getCraftStatus(userId, wId);
+        const wDef = getWeaponDef(wId);
+        return {
+          label: `${status.canCraft ? "✅" : "❌"} ${wDef.name} (${wDef.rarity})`.slice(0, 100),
+          description: `Custo: ${status.recipe.cost} NC | ${status.canCraft ? "Pronto para craftar" : "Faltam recursos"}`.slice(0, 100),
+          value: wId
+        };
+      }))
+  );
+
+  const backRow = new ActionRowBuilder().addComponents(
+    new ButtonBuilder().setCustomId("forge_home").setLabel("Voltar").setStyle(ButtonStyle.Secondary)
+  );
+
+  return { content: null, embeds: [embed], components: [row, backRow] };
+}
+
+async function handleCraftWeaponsCommand(message) {
+  const viewer = message.author || message.user;
+  if (!viewer?.id) {
+    return message.reply?.("Não consegui identificar o jogador.");
+  }
+
+  return message.reply(buildCraftWeaponsPayload(viewer.id));
+}
+
 function rerollLegendaryAbility(userId, instanceId, rng = Math.random) {
   const inventory = getUserInventory(userId);
   const weapon = inventory.weapons.find((w) => w.instanceId === instanceId);
@@ -493,42 +541,11 @@ async function handleForgeInteraction(interaction) {
 
   // --- CRAFT MENU ---
   if (customId === "forge_menu_craft") {
-    const craftingRecipes = config.static.weapons?.crafting || {};
-    const craftableEntries = Object.entries(craftingRecipes)
-      .filter(([weaponId]) => {
-        const weaponDef = getWeaponDef(weaponId);
-        return weaponDef && weaponDef.craftEnabled !== false;
-      });
-
-    if (craftableEntries.length === 0) {
+    const payload = buildCraftWeaponsPayload(userId);
+    if (!payload.embeds?.length) {
       return interaction.reply({ content: "Nenhuma receita de craft disponível no momento.", flags: MessageFlags.Ephemeral });
     }
-
-    const embed = new EmbedBuilder()
-      .setColor("#9B59B6")
-      .setTitle("⚙️ Craftar Arma")
-      .setDescription("Escolha uma arma para forjar do zero.\n\n" + buildCraftDescription(userId, Object.fromEntries(craftableEntries)));
-
-    const row = new ActionRowBuilder().addComponents(
-      new StringSelectMenuBuilder()
-        .setCustomId("forge_select_craft")
-        .setPlaceholder("Escolha uma arma para craftar...")
-        .addOptions(craftableEntries.slice(0, 25).map(([wId]) => {
-          const status = getCraftStatus(userId, wId);
-          const wDef = getWeaponDef(wId);
-          return {
-            label: `${status.canCraft ? "✅" : "❌"} ${wDef.name} (${wDef.rarity})`.slice(0, 100),
-            description: `Custo: ${status.recipe.cost} NC | ${status.canCraft ? "Pronto para craftar" : "Faltam recursos"}`.slice(0, 100),
-            value: wId
-          };
-        }))
-    );
-
-    const backRow = new ActionRowBuilder().addComponents(
-      new ButtonBuilder().setCustomId("forge_home").setLabel("Voltar").setStyle(ButtonStyle.Secondary)
-    );
-
-    return interaction.update({ content: null, embeds: [embed], components: [row, backRow] });
+    return interaction.update(payload);
   }
 
   if (interaction.isStringSelectMenu() && customId === "forge_select_craft") {
@@ -709,5 +726,7 @@ module.exports = {
   fortifyWeapon,
   craftWeapon,
   rerollLegendaryAbility,
+  buildCraftWeaponsPayload,
+  handleCraftWeaponsCommand,
   handleForgeInteraction
 };

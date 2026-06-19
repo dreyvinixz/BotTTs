@@ -1147,7 +1147,7 @@ Validar se mostra:
 
 ## 18. Suite 15 — IA, imagem, voz e chat espontâneo
 
-Esses testes devem mockar serviços externos para não depender de Ollama, Forge, Edge TTS, Google TTS ou internet.
+Esses testes devem mockar serviços externos para não depender de Gemini CLI, Forge, Edge TTS, Google TTS ou internet.
 
 ### `!nana`
 
