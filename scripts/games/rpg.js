@@ -518,10 +518,10 @@ async function iniciarModoEnigma(channelId, channel, themeObj, diffObj, themeKey
     }
 
     // Limpeza final de parênteses para todas as opções (LLM ou Banco)
-    verdadeira = verdadeira.replace(/\s*\(.*?\)/g, '').trim();
-    f1 = f1.replace(/\s*\(.*?\)/g, '').trim();
-    f2 = f2.replace(/\s*\(.*?\)/g, '').trim();
-    f3 = f3.replace(/\s*\(.*?\)/g, '').trim();
+    verdadeira = verdadeira.replace(/\s*\([cC]orreta.*?\)/gi, '').trim();
+    f1 = f1.replace(/\s*\([fF]alsa.*?\)/gi, '').trim();
+    f2 = f2.replace(/\s*\([fF]alsa.*?\)/gi, '').trim();
+    f3 = f3.replace(/\s*\([fF]alsa.*?\)/gi, '').trim();
 
     // Embaralhar opções
     const opcoes = [

@@ -126,10 +126,26 @@
         "a gigantic spectral leviathan floating in the sky, ethereal lighting, epic fantasy art, 8k resolution"
       ],
       "materialDrops": {
-        "pedra_amolar": { "weight": 30, "min": 2, "max": 5 },
-        "fragmento_mana": { "weight": 25, "min": 1, "max": 3 },
-        "essencia_rara": { "weight": 15, "min": 1, "max": 2 },
-        "nucleo_lendario": { "weight": 5, "min": 1, "max": 1 }
+        "pedra_amolar": {
+          "weight": 30,
+          "min": 2,
+          "max": 5
+        },
+        "fragmento_mana": {
+          "weight": 25,
+          "min": 1,
+          "max": 3
+        },
+        "essencia_rara": {
+          "weight": 15,
+          "min": 1,
+          "max": 2
+        },
+        "nucleo_lendario": {
+          "weight": 5,
+          "min": 1,
+          "max": 1
+        }
       }
     },
     "mini": {
@@ -146,9 +162,21 @@
         "a vicious two-headed hellhound covered in chains, fiery background, digital illustration, highly detailed"
       ],
       "materialDrops": {
-        "pedra_amolar": { "weight": 40, "min": 1, "max": 3 },
-        "fragmento_mana": { "weight": 20, "min": 1, "max": 2 },
-        "essencia_rara": { "weight": 8, "min": 1, "max": 1 }
+        "pedra_amolar": {
+          "weight": 40,
+          "min": 1,
+          "max": 3
+        },
+        "fragmento_mana": {
+          "weight": 20,
+          "min": 1,
+          "max": 2
+        },
+        "essencia_rara": {
+          "weight": 8,
+          "min": 1,
+          "max": 1
+        }
       }
     },
     "actions": {
@@ -184,6 +212,13 @@
         "damageMin": 40,
         "damageMax": 90,
         "weaponMultiplier": 1.8
+      },
+      "defend": {
+        "label": "🛡️ Defender!",
+        "style": "Success",
+        "cooldownMs": 0,
+        "damageMin": 0,
+        "damageMax": 0
       }
     },
     "phases": [
@@ -215,8 +250,18 @@
         "resistanceMultiplier": 0.8
       }
     ],
-    "topBonus": [0.15, 0.1, 0.05],
-    "minimumDamageForPrize": 1
+    "topBonus": [
+      0.15,
+      0.1,
+      0.05
+    ],
+    "minimumDamageForPrize": 1,
+    "ultimate": {
+      "intervalMs": 30000,
+      "durationMs": 2000,
+      "penaltyMs": 15000,
+      "damageBuffMultiplier": 2
+    }
   },
   "market": {
     "orderExpireMs": 86400000,

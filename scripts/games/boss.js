@@ -13,6 +13,11 @@ const {
   computeBossPrizes
 } = require("./bossRules");
 
+async function ephemeralReply(interaction, content, timeout = 3500) {
+  await interaction.reply({ content, flags: MessageFlags.Ephemeral }).catch(() => null);
+  setTimeout(() => interaction.deleteReply().catch(() => null), timeout);
+}
+
 const activeBosses = new Map();
 const bossConfig = config.static.app.boss;
 
@@ -115,6 +120,9 @@ async function spawnBoss(channels, type = "world") {
         charges: new Map(),
         messageId: null,
         timerId: null,
+        ultimateIntervalId: null,
+        isCastingUltimate: false,
+        defenders: new Set(),
         renderQueued: false
       };
 
@@ -129,12 +137,49 @@ async function spawnBoss(channels, type = "world") {
 
       placeholder.timerId = setTimeout(() => {
         if (activeBosses.has(msg.id)) {
+          if (placeholder.ultimateIntervalId) clearInterval(placeholder.ultimateIntervalId);
           msg.edit({ content: `⏰ **${typeConfig.name} fugiu!** O tempo acabou e a raid falhou.`, components: [] }).catch(() => null);
           activeBosses.delete(msg.id);
         }
       }, typeConfig.expireMs);
 
       activeBosses.set(msg.id, placeholder);
+
+      placeholder.ultimateIntervalId = setInterval(async () => {
+        const currentBoss = activeBosses.get(msg.id);
+        if (!currentBoss) {
+          if (placeholder.ultimateIntervalId) clearInterval(placeholder.ultimateIntervalId);
+          return;
+        }
+        
+        currentBoss.isCastingUltimate = true;
+        currentBoss.defenders.clear();
+        
+        await msg.edit({
+          content: renderBossContent(currentBoss) + "\n\n⚠️ **O BOSS ESTÁ PREPARANDO UM ATAQUE FULMINANTE! DEFENDAM-SE! (2s)** ⚠️",
+          components: [
+            new ActionRowBuilder().addComponents(
+              new ButtonBuilder()
+                .setCustomId(`boss_defend_${msg.id}`)
+                .setLabel("🛡️ DEFENDER!")
+                .setStyle(ButtonStyle.Success)
+            )
+          ]
+        }).catch(() => null);
+
+        setTimeout(async () => {
+          const bossAfter = activeBosses.get(msg.id);
+          if (!bossAfter) return;
+          
+          bossAfter.isCastingUltimate = false;
+          await msg.edit({
+            content: renderBossContent(bossAfter) + "\n\n💥 **O ATAQUE FULMINANTE PASSOU!** 💥",
+            components: buildBossRows(msg.id)
+          }).catch(() => null);
+          
+        }, bossConfig.ultimate?.durationMs || 2000);
+
+      }, bossConfig.ultimate?.intervalMs || 30000);
     } catch (err) {
       console.log(`⚠️ Falha ao spawnar ${typeConfig.name} no canal ${channel.id}: ${err.message}`);
     }
@@ -161,6 +206,7 @@ function queueBossRender(messageId, message) {
 
 async function finishBoss(interaction, boss) {
   if (boss.timerId) clearTimeout(boss.timerId);
+  if (boss.ultimateIntervalId) clearInterval(boss.ultimateIntervalId);
   activeBosses.delete(interaction.message.id);
 
   const { decrementBuff } = require("../economy/activeEffects");
@@ -228,7 +274,7 @@ async function handleBossInteraction(interaction) {
   const [, actionId] = interaction.customId.split("_");
   const boss = activeBosses.get(interaction.message.id);
   if (!boss) {
-    await interaction.reply({ content: "Este boss ja foi derrotado ou expirou!", flags: MessageFlags.Ephemeral });
+    await ephemeralReply(interaction, "Este boss ja foi derrotado ou expirou!");
     return true;
   }
 
@@ -239,7 +285,24 @@ async function handleBossInteraction(interaction) {
   const nextAttack = boss.cooldowns.get(cooldownKey) || 0;
   if (now < nextAttack) {
     const wait = Math.ceil((nextAttack - now) / 1000);
-    await interaction.reply({ content: `⏳ Aguarde **${wait}s** para usar esta acao de novo.`, flags: MessageFlags.Ephemeral });
+    await ephemeralReply(interaction, `⏳ Aguarde **${wait}s** para usar esta acao de novo.`, 2500);
+    return true;
+  }
+
+  if (actionId === "defend") {
+    if (!boss.isCastingUltimate) {
+      await ephemeralReply(interaction, "Calma! O Boss não está atacando agora.");
+      return true;
+    }
+    boss.defenders.add(userId);
+    await ephemeralReply(interaction, "🛡️ Você se defendeu do Ataque Fulminante!", 4000);
+    return true;
+  }
+
+  if (boss.isCastingUltimate) {
+    const penaltyMs = bossConfig.ultimate?.penaltyMs || 15000;
+    boss.cooldowns.set(cooldownKey, now + penaltyMs);
+    await ephemeralReply(interaction, `💥 **STUNNED!** Você tentou atacar durante o Ataque Fulminante e se deu mal! Cooldown aumentado em ${penaltyMs/1000}s.`, 5000);
     return true;
   }
 
@@ -255,13 +318,19 @@ async function handleBossInteraction(interaction) {
   }
 
   const charge = boss.charges.get(userId) || 1;
+  const ultimateBuff = boss.defenders.has(userId) ? (bossConfig.ultimate?.damageBuffMultiplier || 2) : 1;
+  
   const attack = computeBossAttackDamage({
     actionId,
     hp: boss.hp,
     maxHp: boss.maxHp,
-    charge,
+    charge: charge * ultimateBuff,
     weaponDamage: weaponResult.damage
   });
+
+  if (ultimateBuff > 1) {
+    boss.defenders.delete(userId); // Consume buff
+  }
 
   boss.charges.set(userId, actionId === "charge" ? (action.chargeBonus || 1) : 1);
   boss.hp = applyDamage(boss.hp, attack.damage);
@@ -275,12 +344,12 @@ async function handleBossInteraction(interaction) {
   const abilityText = weaponResult.ability ? `\n✨ Habilidade ativada: **${weaponResult.ability.label}**.` : "";
 
   if (boss.hp <= 0) {
-    await interaction.reply({ content: `💥 Voce causou **${attack.damage}** de dano${weaponText}!${abilityText}`, flags: MessageFlags.Ephemeral }).catch(() => null);
+    await ephemeralReply(interaction, `💥 Voce causou **${attack.damage}** de dano${weaponText}!${abilityText}`, 5000);
     await finishBoss(interaction, boss);
     return true;
   }
 
-  await interaction.reply({ content: `💥 Voce usou **${action.label}** e causou **${attack.damage}** de dano${weaponText}!${abilityText}`, flags: MessageFlags.Ephemeral });
+  await ephemeralReply(interaction, `💥 Voce usou **${action.label}** e causou **${attack.damage}** de dano${weaponText}!${abilityText}`, 3500);
   queueBossRender(interaction.message.id, interaction.message);
   return true;
 }

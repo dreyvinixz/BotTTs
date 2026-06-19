@@ -1,22 +1,56 @@
 {
   "rarities": {
-    "comum": { "label": "Comum", "color": "#9CA3AF", "priceMultiplier": 1 },
-    "raro": { "label": "Raro", "color": "#8B5CF6", "priceMultiplier": 2.4 },
-    "epico": { "label": "Epico", "color": "#EC4899", "priceMultiplier": 4.2 },
-    "lendario": { "label": "Lendario", "color": "#FACC15", "priceMultiplier": 8 }
+    "comum": {
+      "label": "Comum",
+      "color": "#9CA3AF",
+      "priceMultiplier": 1
+    },
+    "raro": {
+      "label": "Raro",
+      "color": "#8B5CF6",
+      "priceMultiplier": 2.4
+    },
+    "epico": {
+      "label": "Epico",
+      "color": "#EC4899",
+      "priceMultiplier": 4.2
+    },
+    "lendario": {
+      "label": "Lendario",
+      "color": "#FACC15",
+      "priceMultiplier": 8
+    }
   },
   "fortify": {
     "maxLevel": 5,
-    "successChance": [0.9, 0.75, 0.55, 0.35, 0.2],
+    "successChance": [
+      0.9,
+      0.75,
+      0.55,
+      0.35,
+      0.2
+    ],
     "bonusPerLevel": {
       "bossDamage": 0.05,
       "duelPower": 0.05
     },
     "materialCost": {
-      "comum": { "materialId": "pedra_amolar", "amount": 2 },
-      "raro": { "materialId": "fragmento_mana", "amount": 3 },
-      "epico": { "materialId": "essencia_rara", "amount": 4 },
-      "lendario": { "materialId": "nucleo_lendario", "amount": 6 }
+      "comum": {
+        "materialId": "pedra_amolar",
+        "amount": 2
+      },
+      "raro": {
+        "materialId": "fragmento_mana",
+        "amount": 3
+      },
+      "epico": {
+        "materialId": "essencia_rara",
+        "amount": 4
+      },
+      "lendario": {
+        "materialId": "nucleo_lendario",
+        "amount": 6
+      }
     },
     "failurePenalty": "consumeMaterial"
   },
@@ -24,56 +58,112 @@
     "espada_madeira": {
       "cost": 300,
       "materials": [
-        { "materialId": "pedra_amolar", "amount": 5 }
+        {
+          "materialId": "pedra_amolar",
+          "amount": 5
+        }
       ]
     },
     "adaga_ferro": {
       "cost": 450,
       "materials": [
-        { "materialId": "pedra_amolar", "amount": 6 }
+        {
+          "materialId": "pedra_amolar",
+          "amount": 6
+        }
       ]
     },
     "arco_cacador": {
       "cost": 1200,
       "materials": [
-        { "materialId": "pedra_amolar", "amount": 8 },
-        { "materialId": "fragmento_mana", "amount": 2 }
+        {
+          "materialId": "pedra_amolar",
+          "amount": 8
+        },
+        {
+          "materialId": "fragmento_mana",
+          "amount": 2
+        }
       ]
     },
     "espada_chamas": {
       "cost": 1800,
       "materials": [
-        { "materialId": "pedra_amolar", "amount": 6 },
-        { "materialId": "fragmento_mana", "amount": 4 }
+        {
+          "materialId": "pedra_amolar",
+          "amount": 6
+        },
+        {
+          "materialId": "fragmento_mana",
+          "amount": 4
+        }
       ]
     },
     "machado_trovao": {
       "cost": 3000,
       "materials": [
-        { "materialId": "fragmento_mana", "amount": 6 },
-        { "materialId": "essencia_rara", "amount": 2 }
+        {
+          "materialId": "fragmento_mana",
+          "amount": 6
+        },
+        {
+          "materialId": "essencia_rara",
+          "amount": 2
+        }
       ]
     },
     "martelo_abismo": {
       "cost": 4200,
       "materials": [
-        { "materialId": "fragmento_mana", "amount": 5 },
-        { "materialId": "essencia_rara", "amount": 4 }
+        {
+          "materialId": "fragmento_mana",
+          "amount": 5
+        },
+        {
+          "materialId": "essencia_rara",
+          "amount": 4
+        }
       ]
     },
     "espada_gelo": {
       "cost": 12000,
       "materials": [
-        { "materialId": "essencia_rara", "amount": 6 },
-        { "materialId": "nucleo_lendario", "amount": 2 }
+        {
+          "materialId": "essencia_rara",
+          "amount": 6
+        },
+        {
+          "materialId": "nucleo_lendario",
+          "amount": 2
+        }
       ],
       "allowLegendary": true
     },
     "cajado_estelar": {
       "cost": 15000,
       "materials": [
-        { "materialId": "essencia_rara", "amount": 8 },
-        { "materialId": "nucleo_lendario", "amount": 3 }
+        {
+          "materialId": "essencia_rara",
+          "amount": 8
+        },
+        {
+          "materialId": "nucleo_lendario",
+          "amount": 3
+        }
+      ],
+      "allowLegendary": true
+    },
+    "foice_morte": {
+      "cost": 20000,
+      "materials": [
+        {
+          "materialId": "essencia_rara",
+          "amount": 10
+        },
+        {
+          "materialId": "nucleo_lendario",
+          "amount": 5
+        }
       ],
       "allowLegendary": true
     }
@@ -83,16 +173,31 @@
     "amountPerReroll": 3,
     "chanceRange": {
       "min": 0.15,
-      "max": 0.40
+      "max": 0.4
     }
   },
   "classes": {
-    "espada": { "label": "Espadas" },
-    "machado": { "label": "Machados" },
-    "arco": { "label": "Arcos" },
-    "cajado": { "label": "Cajados" },
-    "adaga": { "label": "Adagas" },
-    "martelo": { "label": "Martelos" }
+    "espada": {
+      "label": "Espadas"
+    },
+    "machado": {
+      "label": "Machados"
+    },
+    "arco": {
+      "label": "Arcos"
+    },
+    "cajado": {
+      "label": "Cajados"
+    },
+    "adaga": {
+      "label": "Adagas"
+    },
+    "martelo": {
+      "label": "Martelos"
+    },
+    "foice": {
+      "label": "Foices"
+    }
   },
   "weapons": {
     "espada_madeira": {
@@ -210,6 +315,26 @@
         "label": "Perfuração Arcana",
         "description": "Aumenta perfuração de defesa em duelos.",
         "duelPierceBonus": 0.2,
+        "chance": 0.3
+      }
+    },
+    "foice_morte": {
+      "name": "Foice da Morte",
+      "class": "foice",
+      "rarity": "lendario",
+      "basePrice": 25000,
+      "durability": 35,
+      "bossDamage": 550,
+      "duelPower": 35,
+      "pierceParrudoChance": 0.4,
+      "pierceDefenseChance": 0.35,
+      "lootWeight": 1,
+      "shopEnabled": false,
+      "ability": {
+        "id": "execute",
+        "label": "Execução",
+        "description": "Alta chance de roubar 20% a mais no duelo ou dar hit massivo no Boss.",
+        "bossFinalPhaseMultiplier": 2.5,
         "chance": 0.3
       }
     }

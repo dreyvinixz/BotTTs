@@ -612,8 +612,9 @@ function raidPanelRows(guildId) {
   return [
     new ActionRowBuilder().addComponents(
       new ButtonBuilder().setCustomId("raid_start").setLabel("Iniciar Raid").setEmoji("⚔️").setStyle(ButtonStyle.Danger),
-      new ButtonBuilder().setCustomId("raid_defend").setLabel("Defender Servidor").setEmoji("🛡️").setStyle(ButtonStyle.Primary),
-      new ButtonBuilder().setCustomId("raid_shop").setLabel("Loja de Raid").setEmoji("🛒").setStyle(ButtonStyle.Success)
+      new ButtonBuilder().setCustomId("raid_defend").setLabel("Defender").setEmoji("🛡️").setStyle(ButtonStyle.Primary),
+      new ButtonBuilder().setCustomId("raid_shop").setLabel("Loja de Raid").setEmoji("🛒").setStyle(ButtonStyle.Success),
+      new ButtonBuilder().setCustomId("raid_use_item").setLabel("Usar Item").setEmoji("🎒").setStyle(ButtonStyle.Secondary)
     ),
     new ActionRowBuilder().addComponents(
       new ButtonBuilder().setCustomId("raid_status").setLabel("Status da Raid").setEmoji("📊").setStyle(ButtonStyle.Secondary),
@@ -724,8 +725,8 @@ function buildMyRaidItemsPayload(userId) {
 }
 
 function buildUseItemPayload(userId, guildId) {
-  const raid = findRaidByStatus(guildId, ["active"]);
-  if (!raid) return { content: "Não há Raid ativa envolvendo este servidor.", embeds: [], components: [] };
+  const raid = findRaidByStatus(guildId, ["lobby", "active"]);
+  if (!raid) return { content: "Não há Raid ativa nem Lobby para este servidor no momento.", embeds: [], components: [] };
   const side = getRaidSide(raid, guildId);
   const inventory = getUserInventory(userId);
   const items = getRaidItems(side)
